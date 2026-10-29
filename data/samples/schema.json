@@ -1,0 +1,25 @@
+{
+  "description": "Outputs of the Solana leader-ordering measurement. Judges re-fetch any block with getBlock(slot, {encoding: jsonParsed, maxSupportedTransactionVersion: 1, transactionDetails: full, rewards: false, commitment: confirmed}) and match memos that start with ib|1| or signatures from sent_transactions.jsonl. Lamports are integers. SOL strings are 9 decimal places. entry_index is null when getBlock does not provide entry boundaries. manifest.json, run_summary.json, and planned_transactions.* in this directory are the deterministic offline fixture (experiment_id e1071-test). mainnet_dry_run_manifest.json and mainnet_dry_run_summary.json are one post-Alpenglow mainnet dry-run and are not a golden test vector.",
+  "files": {
+    "manifest.json": {
+      "required": ["alpenglow", "client_families", "experiment_id", "selection_ok", "spend", "targets"],
+      "alpenglow.regime": "after or before. A successful measurement is after.",
+      "spend.planned_fee_lamports": "Sum of estimated fees for the unsigned plan.",
+      "spend.hard_cap_lamports": 50000000,
+      "targets[]": "identity, client_id, client_family, version, tpu_quic, assigned_windows"
+    },
+    "planned_transactions.jsonl": {
+      "one_object_per_line": true,
+      "identity_fields": ["experiment_id", "seq", "memo", "identity", "planned_slot", "window_start_slot"],
+      "hypothesis_fields": ["rank_cu_price", "rank_priority_fee", "rank_send_order", "rank_arm_cu_price", "rank_arm_priority_fee", "rank_arm_send_order"],
+      "safety_fields": ["signed", "sent", "fee_lamports", "unsigned_message_base64"]
+    },
+    "planned_transactions.csv": "Same rows as the JSONL.",
+    "run_summary.json": ["aborted", "dry_run", "exit_code", "live", "planned_fee_lamports", "regime", "selection_ok", "sent_count", "signed_count", "targets_preview"],
+    "sent_transactions.jsonl": "Live only. signature, seq, slot_sent_at, planned_slot, path, destination, sent, signed, error, fee_lamports.",
+    "block_observations.jsonl": "One row per planned transaction plus any unmatched ib|1| memo. landed, slot, block_index, entry_index, signature, fee_lamports, cu_price_set, cu_limit_set, cu_consumed, execution_err, memo.",
+    "block_observations.csv": "Same rows as the observations JSONL. Empty cell means null.",
+    "block_context.jsonl": "One row per fetched block: slot, tx_count, our_tx_count, entry_index_available, transactions[]. Each transaction has block_index, signature, fee_lamports, cu_price_micro_lamports, cu_limit, is_ours.",
+    "hypothesis_agreement.json": "Pairwise agree/pairs/rate for each pre-registered rank field. rate is null when pairs is 0."
+  }
+}

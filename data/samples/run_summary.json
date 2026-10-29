@@ -1,0 +1,187 @@
+{
+  "aborted": null,
+  "client_families": [
+    "firedancer",
+    "frankendancer",
+    "harmonic-firedancer",
+    "jito-solana",
+    "agave",
+    "harmonic-agave"
+  ],
+  "client_ids": [
+    "Firedancer",
+    "Frankendancer",
+    "HarmonicFiredancer",
+    "JitoLabs",
+    "Agave",
+    "HarmonicAgave"
+  ],
+  "dry_run": true,
+  "exit_code": 0,
+  "experiment_id": "e1071-test",
+  "live": false,
+  "notes": [],
+  "planned_fee_lamports": 8928000,
+  "planned_fee_sol": "0.008928000",
+  "planned_transactions": 216,
+  "regime": "after",
+  "regime_ok": true,
+  "selection_ok": true,
+  "selection_reason": null,
+  "sent_count": 0,
+  "signed_count": 0,
+  "source": "fixture",
+  "spend_cap_lamports": 50000000,
+  "spend_cap_sol": "0.050000000",
+  "spent_estimate_lamports": 0,
+  "target_validators": 6,
+  "targets_preview": [
+    {
+      "client_family": "firedancer",
+      "client_id": "Firedancer",
+      "identity": "8M5QUYts4PY375tKCoVDQexdzsS8Z4AdQbh6KKfNmvvi",
+      "version": "26.10.4",
+      "windows": [
+        {
+          "path": "tpu",
+          "repeat_index": 0,
+          "start_slot": 1000020
+        },
+        {
+          "path": "tpu",
+          "repeat_index": 1,
+          "start_slot": 1000024
+        },
+        {
+          "path": "rpc",
+          "repeat_index": 2,
+          "start_slot": 1000028
+        }
+      ]
+    },
+    {
+      "client_family": "frankendancer",
+      "client_id": "Frankendancer",
+      "identity": "FBPJPh9LLB7iM6HQ2szRRVGYy7LhL9k9yE2NfELeZCix",
+      "version": "0.101.40300",
+      "windows": [
+        {
+          "path": "tpu",
+          "repeat_index": 0,
+          "start_slot": 1000032
+        },
+        {
+          "path": "tpu",
+          "repeat_index": 1,
+          "start_slot": 1000036
+        },
+        {
+          "path": "rpc",
+          "repeat_index": 2,
+          "start_slot": 1000040
+        }
+      ]
+    },
+    {
+      "client_family": "harmonic-firedancer",
+      "client_id": "HarmonicFiredancer",
+      "identity": "BeCfdcGdhagF1rhaJU3LqrraEEL2fyAC7rwXpRbh8zg3",
+      "version": "26.10.4",
+      "windows": [
+        {
+          "path": "tpu",
+          "repeat_index": 0,
+          "start_slot": 1000044
+        },
+        {
+          "path": "tpu",
+          "repeat_index": 1,
+          "start_slot": 1000048
+        },
+        {
+          "path": "rpc",
+          "repeat_index": 2,
+          "start_slot": 1000052
+        }
+      ]
+    },
+    {
+      "client_family": "jito-solana",
+      "client_id": "JitoLabs",
+      "identity": "5xfaRZhMoPpucP7jGhkhGGrPqrzGx9erv4ptJoLoSwzP",
+      "version": "4.3.2",
+      "windows": [
+        {
+          "path": "tpu",
+          "repeat_index": 0,
+          "start_slot": 1000056
+        },
+        {
+          "path": "tpu",
+          "repeat_index": 1,
+          "start_slot": 1000060
+        },
+        {
+          "path": "rpc",
+          "repeat_index": 2,
+          "start_slot": 1000064
+        }
+      ]
+    },
+    {
+      "client_family": "agave",
+      "client_id": "Agave",
+      "identity": "FtzXCSAmp3opsN5Kx33ituWMZYRfaJMiPjhqmmgMcLAW",
+      "version": "4.3.2",
+      "windows": [
+        {
+          "path": "tpu",
+          "repeat_index": 0,
+          "start_slot": 1000068
+        },
+        {
+          "path": "tpu",
+          "repeat_index": 1,
+          "start_slot": 1000072
+        },
+        {
+          "path": "rpc",
+          "repeat_index": 2,
+          "start_slot": 1000076
+        }
+      ]
+    },
+    {
+      "client_family": "harmonic-agave",
+      "client_id": "HarmonicAgave",
+      "identity": "FF6JPF2j3QcW74nuS2jY72ekGDu92Fu4KS1hz7WXUFsU",
+      "version": "4.3.2",
+      "windows": [
+        {
+          "path": "tpu",
+          "repeat_index": 0,
+          "start_slot": 1000080
+        },
+        {
+          "path": "tpu",
+          "repeat_index": 1,
+          "start_slot": 1000084
+        },
+        {
+          "path": "rpc",
+          "repeat_index": 2,
+          "start_slot": 1000088
+        }
+      ]
+    }
+  ],
+  "version_strings": [
+    "26.10.4",
+    "0.101.40300",
+    "26.10.4",
+    "4.3.2",
+    "4.3.2",
+    "4.3.2"
+  ],
+  "warnings": []
+}

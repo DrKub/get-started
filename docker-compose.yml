@@ -1,0 +1,24 @@
+# Dry-run against mainnet public RPC. Nothing is signed or sent.
+# `docker compose up --build` is the one-command reproduction.
+services:
+  measure:
+    build: .
+    image: solana-validator-order-measure:local
+    init: true
+    # Host networking so mainnet RPC and leader TPU QUIC are not NATed.
+    network_mode: host
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment:
+      RPC_URL: ${RPC_URL:-https://api.mainnet-beta.solana.com}
+      SPEND_CAP_SOL: ${SPEND_CAP_SOL:-0.05}
+      LOOKAHEAD_SLOTS: ${LOOKAHEAD_SLOTS:-16000}
+      MIN_LEAD_SLOTS: ${MIN_LEAD_SLOTS:-16}
+      TARGET_VALIDATORS: ${TARGET_VALIDATORS:-6}
+      MIN_CLIENT_FAMILIES: ${MIN_CLIENT_FAMILIES:-3}
+      TPU_REPEATS: ${TPU_REPEATS:-2}
+      RPC_REPEATS: ${RPC_REPEATS:-1}
+      OUTPUT_DIR: /app/data/raw
+      KEYPAIR_PATH: ${KEYPAIR_PATH:-}
+    volumes:
+      - ./data:/app/data
+    command: ["run"]

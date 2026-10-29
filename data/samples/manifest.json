@@ -1,0 +1,291 @@
+{
+  "alpenglow": {
+    "activation_epoch": 1064,
+    "activation_utc": "2026-10-21T13:36:00Z",
+    "observed_epoch": 1071,
+    "regime": "after",
+    "regime_ok": true,
+    "source": "https://solana.com/upgrades/alpenglow"
+  },
+  "block_time": 1761800000,
+  "blockhash": "11111111111111111111111111111111",
+  "client_families": [
+    "firedancer",
+    "frankendancer",
+    "harmonic-firedancer",
+    "jito-solana",
+    "agave",
+    "harmonic-agave"
+  ],
+  "client_ids": [
+    "Firedancer",
+    "Frankendancer",
+    "HarmonicFiredancer",
+    "JitoLabs",
+    "Agave",
+    "HarmonicAgave"
+  ],
+  "design": {
+    "hypotheses": [
+      {
+        "arm_rank_field": "rank_arm_cu_price",
+        "id": "cu_price",
+        "rank_field": "rank_cu_price",
+        "statement": "Higher compute-unit price is included earlier. Equal prices break by ascending send index."
+      },
+      {
+        "arm_rank_field": "rank_arm_priority_fee",
+        "id": "priority_fee",
+        "rank_field": "rank_priority_fee",
+        "statement": "Higher total prioritization fee is included earlier. Equal fees break by ascending send index."
+      },
+      {
+        "arm_rank_field": "rank_arm_send_order",
+        "id": "send_order",
+        "rank_field": "rank_send_order",
+        "statement": "Earlier send index is included earlier."
+      }
+    ],
+    "jito_bundles": "out_of_scope",
+    "per_window_fee_lamports": 496000,
+    "primary_evidence": "self_sent_transactions",
+    "write_lock": "single_fee_payer"
+  },
+  "epoch": 1071,
+  "exclusion_counts": {
+    "leader_not_in_cluster_nodes": 1,
+    "missing_client_id": 1,
+    "missing_tpu_quic": 1,
+    "unknown_client_id": 1
+  },
+  "experiment_id": "e1071-test",
+  "fetched_at": "2026-10-29T08:00:00Z",
+  "lookahead_slots": 152,
+  "min_lead_slots": 16,
+  "notes": [],
+  "observed_slot": 1000000,
+  "regime": "after",
+  "rpc_url": null,
+  "schedule_start_slot": 1000000,
+  "selection_ok": true,
+  "selection_reason": null,
+  "slot_index": 1000,
+  "slots_in_epoch": 432000,
+  "source": "fixture",
+  "spend": {
+    "cap_lamports": 50000000,
+    "cap_sol": "0.050000000",
+    "hard_cap_lamports": 50000000,
+    "planned_fee_lamports": 8928000,
+    "planned_fee_sol": "0.008928000"
+  },
+  "targets": [
+    {
+      "assigned_windows": [
+        {
+          "length": 4,
+          "partial": false,
+          "path": "tpu",
+          "repeat_index": 0,
+          "start_slot": 1000020
+        },
+        {
+          "length": 4,
+          "partial": false,
+          "path": "tpu",
+          "repeat_index": 1,
+          "start_slot": 1000024
+        },
+        {
+          "length": 4,
+          "partial": false,
+          "path": "rpc",
+          "repeat_index": 2,
+          "start_slot": 1000028
+        }
+      ],
+      "client_family": "firedancer",
+      "client_id": "Firedancer",
+      "feature_set": 1010,
+      "gossip": "203.0.113.10:8001",
+      "identity": "8M5QUYts4PY375tKCoVDQexdzsS8Z4AdQbh6KKfNmvvi",
+      "tpu_quic": "203.0.113.10:8003",
+      "version": "26.10.4",
+      "windows_available": 3
+    },
+    {
+      "assigned_windows": [
+        {
+          "length": 4,
+          "partial": false,
+          "path": "tpu",
+          "repeat_index": 0,
+          "start_slot": 1000032
+        },
+        {
+          "length": 4,
+          "partial": false,
+          "path": "tpu",
+          "repeat_index": 1,
+          "start_slot": 1000036
+        },
+        {
+          "length": 4,
+          "partial": false,
+          "path": "rpc",
+          "repeat_index": 2,
+          "start_slot": 1000040
+        }
+      ],
+      "client_family": "frankendancer",
+      "client_id": "Frankendancer",
+      "feature_set": 1011,
+      "gossip": "203.0.113.11:8001",
+      "identity": "FBPJPh9LLB7iM6HQ2szRRVGYy7LhL9k9yE2NfELeZCix",
+      "tpu_quic": "203.0.113.11:8003",
+      "version": "0.101.40300",
+      "windows_available": 3
+    },
+    {
+      "assigned_windows": [
+        {
+          "length": 4,
+          "partial": false,
+          "path": "tpu",
+          "repeat_index": 0,
+          "start_slot": 1000044
+        },
+        {
+          "length": 4,
+          "partial": false,
+          "path": "tpu",
+          "repeat_index": 1,
+          "start_slot": 1000048
+        },
+        {
+          "length": 4,
+          "partial": false,
+          "path": "rpc",
+          "repeat_index": 2,
+          "start_slot": 1000052
+        }
+      ],
+      "client_family": "harmonic-firedancer",
+      "client_id": "HarmonicFiredancer",
+      "feature_set": 1012,
+      "gossip": "203.0.113.12:8001",
+      "identity": "BeCfdcGdhagF1rhaJU3LqrraEEL2fyAC7rwXpRbh8zg3",
+      "tpu_quic": "203.0.113.12:8003",
+      "version": "26.10.4",
+      "windows_available": 3
+    },
+    {
+      "assigned_windows": [
+        {
+          "length": 4,
+          "partial": false,
+          "path": "tpu",
+          "repeat_index": 0,
+          "start_slot": 1000056
+        },
+        {
+          "length": 4,
+          "partial": false,
+          "path": "tpu",
+          "repeat_index": 1,
+          "start_slot": 1000060
+        },
+        {
+          "length": 4,
+          "partial": false,
+          "path": "rpc",
+          "repeat_index": 2,
+          "start_slot": 1000064
+        }
+      ],
+      "client_family": "jito-solana",
+      "client_id": "JitoLabs",
+      "feature_set": 1013,
+      "gossip": "203.0.113.13:8001",
+      "identity": "5xfaRZhMoPpucP7jGhkhGGrPqrzGx9erv4ptJoLoSwzP",
+      "tpu_quic": "203.0.113.13:8003",
+      "version": "4.3.2",
+      "windows_available": 3
+    },
+    {
+      "assigned_windows": [
+        {
+          "length": 4,
+          "partial": false,
+          "path": "tpu",
+          "repeat_index": 0,
+          "start_slot": 1000068
+        },
+        {
+          "length": 4,
+          "partial": false,
+          "path": "tpu",
+          "repeat_index": 1,
+          "start_slot": 1000072
+        },
+        {
+          "length": 4,
+          "partial": false,
+          "path": "rpc",
+          "repeat_index": 2,
+          "start_slot": 1000076
+        }
+      ],
+      "client_family": "agave",
+      "client_id": "Agave",
+      "feature_set": 1014,
+      "gossip": "203.0.113.14:8001",
+      "identity": "FtzXCSAmp3opsN5Kx33ituWMZYRfaJMiPjhqmmgMcLAW",
+      "tpu_quic": "203.0.113.14:8003",
+      "version": "4.3.2",
+      "windows_available": 3
+    },
+    {
+      "assigned_windows": [
+        {
+          "length": 4,
+          "partial": false,
+          "path": "tpu",
+          "repeat_index": 0,
+          "start_slot": 1000080
+        },
+        {
+          "length": 4,
+          "partial": false,
+          "path": "tpu",
+          "repeat_index": 1,
+          "start_slot": 1000084
+        },
+        {
+          "length": 4,
+          "partial": false,
+          "path": "rpc",
+          "repeat_index": 2,
+          "start_slot": 1000088
+        }
+      ],
+      "client_family": "harmonic-agave",
+      "client_id": "HarmonicAgave",
+      "feature_set": 1015,
+      "gossip": "203.0.113.15:8001",
+      "identity": "FF6JPF2j3QcW74nuS2jY72ekGDu92Fu4KS1hz7WXUFsU",
+      "tpu_quic": "203.0.113.15:8003",
+      "version": "4.3.2",
+      "windows_available": 3
+    }
+  ],
+  "version_strings": [
+    "26.10.4",
+    "0.101.40300",
+    "26.10.4",
+    "4.3.2",
+    "4.3.2",
+    "4.3.2"
+  ],
+  "warnings": []
+}

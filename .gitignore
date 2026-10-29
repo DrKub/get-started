@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+secrets/
+keys/
+id.json
+*-keypair.json
+data/raw/*
+!data/raw/.gitkeep
+__pycache__/
+.pytest_cache/
+.venv/
+*.pyc
+.mypy_cache/
+dist/
+*.egg-info/

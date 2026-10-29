@@ -1,0 +1,2 @@
+solders==0.29.0
+aioquic==1.7.0
