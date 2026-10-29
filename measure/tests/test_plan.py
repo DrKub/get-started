@@ -111,7 +111,7 @@ def test_shuffled_send_order_breaks_fee_send_collinearity():
             )
             assert [tx.send_index for tx in txs] == list(range(len(txs)))
             tau = kendall_tau_b(fees, [tx.send_index for tx in txs])
-            assert -1 < tau < 1
+            assert abs(tau) <= 1 / 3 + 1e-9
             orders.add(tuple(fees))
             if ladder == "nonconflict":
                 rung_payer = {
@@ -127,6 +127,28 @@ def test_shuffled_send_order_breaks_fee_send_collinearity():
         tx.transfer_lamports for tx in ascending.txs if tx.role == "funding"
     )
     assert plan.total_fee_lamports == ascending.total_fee_lamports
+
+
+def test_conflict_only_plan_needs_no_funding_or_rent():
+    plan = build_experiment(
+        build_offline_snapshot(),
+        experiment_id="e1071-test",
+        min_lead_slots=16,
+        target_validators=6,
+        min_client_families=3,
+        tail_is_complete=True,
+        cap_remaining_lamports=50_000_000,
+        main_payer="8E15T21wGpaMNdcReLFFrBHXCoZdaMJpNV89n1wYrp1u",
+        send_order="shuffled",
+        ladders="conflict",
+    )
+    assert plan.nonconflict_rungs == ()
+    assert {tx.ladder for tx in plan.txs} == {"conflict"}
+    assert len(plan.txs) == 36
+    assert plan.funding_principal_lamports == 0
+    assert plan.total_fee_lamports == 180_186
+    assert plan.projected_outlay_lamports == 180_186
+    assert not getattr(plan, "ephemeral_signers", {})
 
 
 def test_descending_send_order_is_highest_fee_first():

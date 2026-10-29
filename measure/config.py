@@ -67,6 +67,7 @@ class Config:
     tpu_copies: int = 1
     send_order: str = DEFAULT_SEND_ORDER
     send_order_seed: int | None = None
+    ladders: str = "both"
 
     @property
     def spend_cap_sol(self) -> str:
@@ -103,6 +104,7 @@ def config_from_env() -> dict:
         "tpu_copies": _positive_int("TPU_COPIES", _env("TPU_COPIES") or "1"),
         "collect": (_env("COLLECT") or "").lower() in ("1", "true", "yes"),
         "send_order": (_env("SEND_ORDER") or DEFAULT_SEND_ORDER).lower(),
+        "ladders": (_env("LADDERS") or "both").lower(),
         "send_order_seed": (
             _positive_int("SEND_ORDER_SEED", _env("SEND_ORDER_SEED"))
             if _env("SEND_ORDER_SEED")
@@ -149,6 +151,7 @@ def make_config(
     tpu_copies: int | None = None,
     send_order: str | None = None,
     send_order_seed: int | None = None,
+    ladders: str | None = None,
 ) -> Config:
     env = config_from_env()
     cap = resolve_spend_cap(spend_cap_sol or env["spend_cap_sol"])
@@ -178,6 +181,7 @@ def make_config(
         tpu_copies=env["tpu_copies"] if tpu_copies is None else tpu_copies,
         send_order=(send_order or env["send_order"]).lower(),
         send_order_seed=env["send_order_seed"] if send_order_seed is None else send_order_seed,
+        ladders=(ladders or env["ladders"]).lower(),
     )
     _validate(config)
     return config
@@ -202,6 +206,8 @@ def _validate(config: Config) -> None:
         raise ConfigError("TPU_COPIES must be between 1 and 4")
     if config.send_order not in SEND_ORDERS:
         raise ConfigError(f"SEND_ORDER must be one of {', '.join(SEND_ORDERS)}")
+    if config.ladders not in ("both", "conflict"):
+        raise ConfigError("LADDERS must be both or conflict")
     if config.ws_url is not None and not config.ws_url.startswith(("ws://", "wss://")):
         raise ConfigError("WS_URL must start with ws:// or wss://")
     if config.experiment_id is not None:

@@ -27,6 +27,7 @@ services:
       TPU_COPIES: ${TPU_COPIES:-1}
       SEND_ORDER: ${SEND_ORDER:-ascending}
       SEND_ORDER_SEED: ${SEND_ORDER_SEED:-}
+      LADDERS: ${LADDERS:-both}
       # Only read on a live run: fetch getBlock for the landed slots afterwards.
       COLLECT: ${COLLECT:-1}
     volumes:

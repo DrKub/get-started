@@ -274,6 +274,7 @@ def manifest_dict(plan: ExperimentPlan, config: Config) -> dict:
             "funding_submit_path": "rpc+tpu-fanout",
             "retries_inside_window": RETRIES_INSIDE_WINDOW,
             "submit_path": "tpu",
+            "ladders": "conflict" if not plan.nonconflict_rungs else "both",
             "send_order": plan.send_order,
             "send_order_seed": plan.send_order_seed,
             "transmission_order": TRANSMISSION_ORDER_TEXT[plan.send_order],
@@ -504,6 +505,7 @@ def _prepare(config: Config, *, cap_remaining: int, rent_lamports: int) -> tuple
         main_payer=str(main.pubkey()),
         send_order=config.send_order,
         send_order_seed=config.send_order_seed,
+        ladders=config.ladders,
     )
     attach_unsigned_messages(plan.txs, blockhash=snapshot.blockhash, payer_source=payer_source)
     return plan, main

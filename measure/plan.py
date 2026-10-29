@@ -40,6 +40,7 @@ from measure.models import (
     Target,
 )
 from measure.select import build_targets
+from measure.stats import kendall_tau_b
 
 
 def alpenglow_regime(snapshot: ClusterSnapshot) -> str:
@@ -58,8 +59,9 @@ def default_experiment_id(snapshot: ClusterSnapshot) -> str:
 def send_permutation(n: int, order: str, rng: random.Random) -> list[int]:
     """Rung indexes (into the fee-sorted ladder) in the order they are written.
 
-    ``shuffled`` rejects the two monotone permutations so that, for n >= 3,
-    fee rank and send rank are never the same order or its exact reverse.
+    ``shuffled`` keeps only permutations with |tau-b(fee rank, send rank)| <=
+    1/3 when n >= 3, so a fee sort, FIFO arrival, and a LIFO drain predict
+    clearly different block orders for the same burst.
     """
     if order == "ascending":
         return list(range(n))
@@ -67,10 +69,9 @@ def send_permutation(n: int, order: str, rng: random.Random) -> list[int]:
         return list(range(n - 1, -1, -1))
     if order != "shuffled":
         raise ValueError(f"unknown send order {order!r}")
-    monotone = (list(range(n)), list(range(n - 1, -1, -1)))
     while True:
         perm = rng.sample(range(n), n)
-        if n < 3 or perm not in monotone:
+        if n < 3 or abs(kendall_tau_b(list(range(n)), perm)) <= 1 / 3 + 1e-9:
             return perm
 
 
@@ -154,10 +155,13 @@ def build_experiment(
     main_payer: str,
     send_order: str = DEFAULT_SEND_ORDER,
     send_order_seed: int | None = None,
+    ladders: str = "both",
 ) -> ExperimentPlan:
     exp_id = experiment_id or default_experiment_id(snapshot)
     if send_order == "shuffled" and send_order_seed is None:
         send_order_seed = default_send_order_seed(exp_id)
+    if ladders not in ("both", "conflict"):
+        raise ValueError(f"unknown ladders {ladders!r}")
     targets, excluded, notes, ok, reason = build_targets(
         snapshot,
         min_lead_slots=min_lead_slots,
@@ -170,7 +174,10 @@ def build_experiment(
         cap_remaining=cap_remaining_lamports,
         rent_lamports=rent_lamports,
     )
-    if len(nonconflict_rungs) < len(conflict_rungs):
+    if ladders == "conflict":
+        nonconflict_rungs = ()
+        notes.append("conflict ladder only: no non-conflict payers, no funding, no rent")
+    elif len(nonconflict_rungs) < len(conflict_rungs):
         notes.append(
             "shortened the non-conflict ladder to "
             f"{len(nonconflict_rungs)} rungs so net fees stay within 0.0006 SOL "
@@ -224,7 +231,9 @@ def build_experiment(
         window = target.assigned[0]
         rng = random.Random(f"{send_order_seed}:{target.identity}")
         conflict_order = send_permutation(len(conflict_rungs), send_order, rng)
-        nonconflict_order = send_permutation(len(nonconflict_rungs), send_order, rng)
+        nonconflict_order = (
+            send_permutation(len(nonconflict_rungs), send_order, rng) if nonconflict_rungs else []
+        )
         for send_index, rung in enumerate(conflict_order):
             fee = conflict_rungs[rung]
             txs.append(

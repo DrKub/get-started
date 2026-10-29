@@ -65,6 +65,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="seed for --send-order shuffled; default derives from the experiment id",
     )
+    run.add_argument(
+        "--ladders",
+        choices=("both", "conflict"),
+        default=None,
+        help="conflict = conflict ladder only: no funding, no rent, nothing to sweep. Same as LADDERS.",
+    )
 
     key = sub.add_parser("key", help="print a keypair's public key and balance; do not send")
     key.add_argument("--keypair", default=None)
@@ -161,6 +167,7 @@ def _dispatch(args: argparse.Namespace) -> int:
         tpu_copies=args.tpu_copies,
         send_order=args.send_order,
         send_order_seed=args.send_order_seed,
+        ladders=args.ladders,
     )
     return run_measure(config)
 
