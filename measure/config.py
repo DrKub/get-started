@@ -18,7 +18,9 @@ from measure.constants import (
     DEFAULT_MIN_CLIENT_FAMILIES,
     DEFAULT_MIN_LEAD_SLOTS,
     DEFAULT_RPC_URL,
+    DEFAULT_SEND_ORDER,
     DEFAULT_TARGET_VALIDATORS,
+    SEND_ORDERS,
 )
 from measure.errors import ConfigError
 from measure.fees import lamports_to_sol_str, resolve_spend_cap
@@ -63,6 +65,8 @@ class Config:
     validators_app_token: str | None
     ws_url: str | None = None
     tpu_copies: int = 1
+    send_order: str = DEFAULT_SEND_ORDER
+    send_order_seed: int | None = None
 
     @property
     def spend_cap_sol(self) -> str:
@@ -97,6 +101,12 @@ def config_from_env() -> dict:
         "mode": (_env("MODE") or "").lower(),
         "ws_url": _env("WS_URL"),
         "tpu_copies": _positive_int("TPU_COPIES", _env("TPU_COPIES") or "1"),
+        "send_order": (_env("SEND_ORDER") or DEFAULT_SEND_ORDER).lower(),
+        "send_order_seed": (
+            _positive_int("SEND_ORDER_SEED", _env("SEND_ORDER_SEED"))
+            if _env("SEND_ORDER_SEED")
+            else None
+        ),
     }
 
 
@@ -136,6 +146,8 @@ def make_config(
     collect: bool = False,
     timeout_s: float | None = None,
     tpu_copies: int | None = None,
+    send_order: str | None = None,
+    send_order_seed: int | None = None,
 ) -> Config:
     env = config_from_env()
     cap = resolve_spend_cap(spend_cap_sol or env["spend_cap_sol"])
@@ -163,6 +175,8 @@ def make_config(
         validators_app_token=env["validators_app_token"],
         ws_url=env["ws_url"],
         tpu_copies=env["tpu_copies"] if tpu_copies is None else tpu_copies,
+        send_order=(send_order or env["send_order"]).lower(),
+        send_order_seed=env["send_order_seed"] if send_order_seed is None else send_order_seed,
     )
     _validate(config)
     return config
@@ -185,6 +199,8 @@ def _validate(config: Config) -> None:
         raise ConfigError("spend cap exceeds 0.05 SOL")
     if config.tpu_copies < 1 or config.tpu_copies > 4:
         raise ConfigError("TPU_COPIES must be between 1 and 4")
+    if config.send_order not in SEND_ORDERS:
+        raise ConfigError(f"SEND_ORDER must be one of {', '.join(SEND_ORDERS)}")
     if config.ws_url is not None and not config.ws_url.startswith(("ws://", "wss://")):
         raise ConfigError("WS_URL must start with ws:// or wss://")
     if config.experiment_id is not None:

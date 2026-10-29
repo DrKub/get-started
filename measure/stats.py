@@ -112,7 +112,11 @@ def slot_call(
     p_perm: float | None,
     priority_pairwise: float | None,
     send_pairwise: float | None,
+    tau_send: float | None = None,
+    p_send: float | None = None,
 ) -> str:
+    """``tau``/``p_perm`` are fee vs block index. The arrival test uses send
+    index vs block index when given; on a lowest-fee-first ladder they coincide."""
     if n_landed < 5 or tau is None or p_perm is None:
         return "inconclusive"
     if tau == -1:
@@ -124,6 +128,15 @@ def slot_call(
         and priority_pairwise > 0.5
     ):
         return "priority"
-    if tau >= 0.6 and p_perm <= 0.05 and send_pairwise is not None and send_pairwise > 0.5:
+    arrival_tau = tau if tau_send is None else tau_send
+    arrival_p = p_perm if p_send is None else p_send
+    if (
+        arrival_tau is not None
+        and arrival_p is not None
+        and arrival_tau >= 0.6
+        and arrival_p <= 0.05
+        and send_pairwise is not None
+        and send_pairwise > 0.5
+    ):
         return "arrival"
     return "no_rule_detected"

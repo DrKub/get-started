@@ -79,6 +79,13 @@ RETRIES_INSIDE_WINDOW = False
 # Shorten the non-conflict ladder before the conflict ladder if the cap
 # cannot hold both. Do not drop below six identities or three families.
 LADDER_PRIORITY_FEES = (0, 1, 2, 4, 8, 16)
+# Transmission order of the rungs inside one burst. "ascending" (lowest fee
+# first) is what runs 1-4 used: fee rank and send rank are then the same
+# order, so FIFO arrival predicts tau +1 and both a fee sort and a LIFO drain
+# predict tau -1. "shuffled" draws a non-monotone permutation per leader and
+# ladder from a recorded seed so fee and send order can be separated.
+SEND_ORDERS = ("ascending", "descending", "shuffled")
+DEFAULT_SEND_ORDER = "ascending"
 CONFLICT_SLOT_OFFSET = 0
 NONCONFLICT_SLOT_OFFSET = 2
 TRANSFER_LAMPORTS = 1

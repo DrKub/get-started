@@ -125,3 +125,5 @@ class ExperimentPlan:
     nonconflict_rungs: tuple[int, ...]
     snapshot: ClusterSnapshot
     warnings: list[str] = field(default_factory=list)
+    send_order: str = "ascending"
+    send_order_seed: int | None = None

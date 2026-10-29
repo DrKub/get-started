@@ -43,6 +43,12 @@ from measure.txbuild import attach_unsigned_messages, load_keypair, sign_transac
 
 logger = logging.getLogger("measure")
 
+TRANSMISSION_ORDER_TEXT = {
+    "ascending": "lowest fee first",
+    "descending": "highest fee first",
+    "shuffled": "seeded permutation per leader and ladder",
+}
+
 PLANNED_FIELDS = [item.name for item in fields(PlannedTx)]
 OBSERVATION_FIELDS = [
     "experiment_id",
@@ -266,7 +272,9 @@ def manifest_dict(plan: ExperimentPlan, config: Config) -> dict:
             "funding_submit_path": "rpc+tpu-fanout",
             "retries_inside_window": RETRIES_INSIDE_WINDOW,
             "submit_path": "tpu",
-            "transmission_order": "lowest fee first",
+            "send_order": plan.send_order,
+            "send_order_seed": plan.send_order_seed,
+            "transmission_order": TRANSMISSION_ORDER_TEXT[plan.send_order],
         },
         "max_supported_transaction_version": MAX_SUPPORTED_TRANSACTION_VERSION,
         "mode": config.mode,
@@ -492,6 +500,8 @@ def _prepare(config: Config, *, cap_remaining: int, rent_lamports: int) -> tuple
         cap_remaining_lamports=cap_remaining,
         rent_lamports=rent_lamports,
         main_payer=str(main.pubkey()),
+        send_order=config.send_order,
+        send_order_seed=config.send_order_seed,
     )
     attach_unsigned_messages(plan.txs, blockhash=snapshot.blockhash, payer_source=payer_source)
     return plan, main
@@ -706,7 +716,7 @@ def _run_live(plan: ExperimentPlan, config: Config, run_dir: Path, ledger: Spend
             for tx in probes:
                 groups.setdefault((tx.planned_slot, tx.identity), []).append(tx)
             for key in sorted(groups):
-                batch = groups[key]
+                batch = sorted(groups[key], key=lambda tx: tx.send_index)
                 target = batch[0].planned_slot
                 tpu = batch[0].tpu_quic
                 warm_at = max(target - QUIC_WARMUP_SLOTS, 0)

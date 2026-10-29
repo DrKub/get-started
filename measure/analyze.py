@@ -92,6 +92,8 @@ def ladder_taus(rows: list[dict]) -> list[dict]:
         tau = kendall_tau_b([float(fee) for fee in fees], [float(index) for index in indexes])
         fractions = pairwise_fractions(fees, indexes, sends)
         p_value = permutation_p_value(fees, indexes)
+        tau_send = kendall_tau_b([float(send) for send in sends], [float(index) for index in indexes])
+        p_send = permutation_p_value(sends, indexes)
         reports.append(
             {
                 "block_indexes": indexes,
@@ -101,7 +103,11 @@ def ladder_taus(rows: list[dict]) -> list[dict]:
                     p_perm=p_value,
                     priority_pairwise=fractions["priority_pairwise"],
                     send_pairwise=fractions["send_pairwise"],
+                    tau_send=tau_send,
+                    p_send=p_send,
                 ),
+                "send_indexes": sends,
+                "tau_send_block_index": tau_send,
                 "fees": fees,
                 "identity": identity,
                 "ladder": ladder,

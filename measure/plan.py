@@ -1,8 +1,9 @@
 """Conflict and non-conflict ladders.
 
 Both ladders use one signature, the same compute-unit limit, and a one-lamport
-transfer. Only the priority fee changes. They are sent low-fee first, in
-different slots of the same four-slot window. Probes carry no memo: the
+transfer. Only the priority fee changes. By default they are sent low-fee
+first (``send_order`` changes that), in different slots of the same
+four-slot window. Probes carry no memo: the
 signature recorded at send time is the identity inside the block.
 
 The conflict ladder is a one-lamport self-transfer from the funder, so every
@@ -12,7 +13,9 @@ payer on every rung, also a self-transfer, and those accounts are swept back.
 
 from __future__ import annotations
 
+import random
 import re
+import zlib
 
 from solders.keypair import Keypair
 
@@ -23,6 +26,7 @@ from measure.constants import (
     CONFLICT_SLOT_OFFSET,
     CU_LIMIT,
     DEFAULT_RENT_LAMPORTS,
+    DEFAULT_SEND_ORDER,
     NONCONFLICT_SLOT_OFFSET,
     SIGNATURE_FEE_LAMPORTS,
     TRANSFER_LAMPORTS,
@@ -49,6 +53,29 @@ def alpenglow_regime(snapshot: ClusterSnapshot) -> str:
 def default_experiment_id(snapshot: ClusterSnapshot) -> str:
     stamp = re.sub(r"[^0-9TZ]", "", snapshot.fetched_at)
     return f"e{snapshot.epoch}-{stamp or 'na'}"
+
+
+def send_permutation(n: int, order: str, rng: random.Random) -> list[int]:
+    """Rung indexes (into the fee-sorted ladder) in the order they are written.
+
+    ``shuffled`` rejects the two monotone permutations so that, for n >= 3,
+    fee rank and send rank are never the same order or its exact reverse.
+    """
+    if order == "ascending":
+        return list(range(n))
+    if order == "descending":
+        return list(range(n - 1, -1, -1))
+    if order != "shuffled":
+        raise ValueError(f"unknown send order {order!r}")
+    monotone = (list(range(n)), list(range(n - 1, -1, -1)))
+    while True:
+        perm = rng.sample(range(n), n)
+        if n < 3 or perm not in monotone:
+            return perm
+
+
+def default_send_order_seed(experiment_id: str) -> int:
+    return zlib.crc32(experiment_id.encode())
 
 
 def _require_unique_scores(fees: tuple[int, ...]) -> dict[int, int]:
@@ -125,8 +152,12 @@ def build_experiment(
     cap_remaining_lamports: int,
     rent_lamports: int = DEFAULT_RENT_LAMPORTS,
     main_payer: str,
+    send_order: str = DEFAULT_SEND_ORDER,
+    send_order_seed: int | None = None,
 ) -> ExperimentPlan:
     exp_id = experiment_id or default_experiment_id(snapshot)
+    if send_order == "shuffled" and send_order_seed is None:
+        send_order_seed = default_send_order_seed(exp_id)
     targets, excluded, notes, ok, reason = build_targets(
         snapshot,
         min_lead_slots=min_lead_slots,
@@ -191,7 +222,11 @@ def build_experiment(
 
     for target in targets:
         window = target.assigned[0]
-        for send_index, fee in enumerate(conflict_rungs):
+        rng = random.Random(f"{send_order_seed}:{target.identity}")
+        conflict_order = send_permutation(len(conflict_rungs), send_order, rng)
+        nonconflict_order = send_permutation(len(nonconflict_rungs), send_order, rng)
+        for send_index, rung in enumerate(conflict_order):
+            fee = conflict_rungs[rung]
             txs.append(
                 _tx(
                     experiment_id=exp_id,
@@ -212,7 +247,10 @@ def build_experiment(
                 )
             )
             seq += 1
-        for send_index, fee in enumerate(nonconflict_rungs):
+        # A payer is funded for its own rung's fee, so it follows the rung,
+        # not the send position.
+        for send_index, rung in enumerate(nonconflict_order):
+            fee = nonconflict_rungs[rung]
             txs.append(
                 _tx(
                     experiment_id=exp_id,
@@ -225,8 +263,8 @@ def build_experiment(
                     slot_offset=NONCONFLICT_SLOT_OFFSET,
                     send_index=send_index,
                     priority_fee=fee,
-                    payer=payers[send_index],
-                    recipient=payers[send_index],
+                    payer=payers[rung],
+                    recipient=payers[rung],
                     transfer=TRANSFER_LAMPORTS,
                     tpu_quic=target.tpu_quic,
                     scores=scores,
@@ -260,6 +298,8 @@ def build_experiment(
         nonconflict_rungs=nonconflict_rungs,
         snapshot=snapshot,
         warnings=warnings,
+        send_order=send_order,
+        send_order_seed=send_order_seed,
     )
     # In-memory until a live run writes them under DATA_DIR/keys (mode 0600).
     plan.ephemeral_signers = signers  # type: ignore[attr-defined]

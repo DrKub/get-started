@@ -73,6 +73,106 @@ def test_ladders_are_low_fee_first_and_do_not_share_nonconflict_accounts():
     assert len(set(scores)) == 6
 
 
+def _plan_with_order(order, seed=None):
+    return build_experiment(
+        build_offline_snapshot(),
+        experiment_id="e1071-test",
+        min_lead_slots=16,
+        target_validators=6,
+        min_client_families=3,
+        tail_is_complete=True,
+        cap_remaining_lamports=50_000_000,
+        main_payer="8E15T21wGpaMNdcReLFFrBHXCoZdaMJpNV89n1wYrp1u",
+        send_order=order,
+        send_order_seed=seed,
+    )
+
+
+def test_default_send_order_is_ascending_and_matches_runs_1_to_4():
+    plan = _plan()
+    assert plan.send_order == "ascending"
+    assert plan.send_order_seed is None
+
+
+def test_shuffled_send_order_breaks_fee_send_collinearity():
+    from measure.stats import kendall_tau_b
+
+    plan = _plan_with_order("shuffled")
+    assert plan.send_order_seed is not None
+    assert _plan_with_order("shuffled").send_order_seed == plan.send_order_seed
+    orders = set()
+    for target in plan.targets:
+        for ladder in ("conflict", "nonconflict"):
+            txs = [tx for tx in plan.txs if tx.identity == target.identity and tx.ladder == ladder]
+            txs.sort(key=lambda tx: tx.send_index)
+            fees = [tx.priority_fee_lamports for tx in txs]
+            assert sorted(fees) == sorted(
+                plan.conflict_rungs if ladder == "conflict" else plan.nonconflict_rungs
+            )
+            assert [tx.send_index for tx in txs] == list(range(len(txs)))
+            tau = kendall_tau_b(fees, [tx.send_index for tx in txs])
+            assert -1 < tau < 1
+            orders.add(tuple(fees))
+            if ladder == "nonconflict":
+                rung_payer = {
+                    tx.priority_fee_lamports: tx.payer
+                    for tx in plan.txs
+                    if tx.ladder == "nonconflict" and tx.identity == plan.targets[0].identity
+                }
+                assert all(rung_payer[tx.priority_fee_lamports] == tx.payer for tx in txs)
+    assert len(orders) > 2
+    funding = {tx.recipient: tx.transfer_lamports for tx in plan.txs if tx.role == "funding"}
+    ascending = _plan_with_order("ascending")
+    assert sorted(funding.values()) == sorted(
+        tx.transfer_lamports for tx in ascending.txs if tx.role == "funding"
+    )
+    assert plan.total_fee_lamports == ascending.total_fee_lamports
+
+
+def test_descending_send_order_is_highest_fee_first():
+    plan = _plan_with_order("descending")
+    target = plan.targets[0].identity
+    conflict = sorted(
+        (tx for tx in plan.txs if tx.identity == target and tx.ladder == "conflict"),
+        key=lambda tx: tx.send_index,
+    )
+    assert [tx.priority_fee_lamports for tx in conflict] == list(reversed(LADDER_PRIORITY_FEES))
+
+
+def test_send_order_is_validated(monkeypatch):
+    import pytest
+
+    from measure.config import make_config
+    from measure.errors import ConfigError
+
+    monkeypatch.setenv("SEND_ORDER", "random")
+    with pytest.raises(ConfigError):
+        make_config()
+    monkeypatch.setenv("SEND_ORDER", "shuffled")
+    monkeypatch.setenv("SEND_ORDER_SEED", "7")
+    config = make_config()
+    assert (config.send_order, config.send_order_seed) == ("shuffled", 7)
+    assert make_config(send_order="ascending").send_order == "ascending"
+
+
+def test_arrival_call_uses_send_rank_when_order_is_shuffled():
+    from measure.stats import slot_call
+
+    # Fees shuffled against send order; the block reproduces send order exactly.
+    assert (
+        slot_call(
+            n_landed=6,
+            tau=0.067,
+            p_perm=0.5,
+            priority_pairwise=0.47,
+            send_pairwise=1.0,
+            tau_send=1.0,
+            p_send=1 / 720,
+        )
+        == "arrival"
+    )
+
+
 def test_nonconflict_shortens_before_the_conflict_ladder():
     plan = build_experiment(
         build_offline_snapshot(),

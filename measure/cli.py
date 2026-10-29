@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from measure.config import make_config
+from measure.constants import SEND_ORDERS
 from measure.errors import ConfigError, MeasureError
 from measure.fees import lamports_to_sol_str
 from measure.keyinfo import describe_keypair
@@ -47,6 +48,22 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=None,
         help="how many times to write each probe burst to that leader's TPU (default 1)",
+    )
+    run.add_argument(
+        "--send-order",
+        choices=SEND_ORDERS,
+        default=None,
+        help=(
+            "order of the rungs inside a burst: ascending = lowest fee first (default, "
+            "runs 1-4), descending = highest fee first, shuffled = seeded non-monotone "
+            "permutation per leader and ladder. Same as SEND_ORDER."
+        ),
+    )
+    run.add_argument(
+        "--send-order-seed",
+        type=int,
+        default=None,
+        help="seed for --send-order shuffled; default derives from the experiment id",
     )
 
     key = sub.add_parser("key", help="print a keypair's public key and balance; do not send")
@@ -142,6 +159,8 @@ def _dispatch(args: argparse.Namespace) -> int:
         live=bool(args.live),
         collect=bool(args.collect),
         tpu_copies=args.tpu_copies,
+        send_order=args.send_order,
+        send_order_seed=args.send_order_seed,
     )
     return run_measure(config)
 
