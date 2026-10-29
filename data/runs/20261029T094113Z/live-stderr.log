@@ -1,0 +1,71 @@
+2026-10-29 09:41:13,658 INFO slot clock: slotSubscribe
+2026-10-29 09:41:14,455 ERROR funding RPC send failed: sendTransaction HTTP 429
+2026-10-29 09:41:14,536 ERROR funding RPC send failed: sendTransaction HTTP 429
+2026-10-29 09:41:14,583 ERROR funding RPC send failed: sendTransaction HTTP 429
+2026-10-29 09:41:14,674 ERROR funding RPC send failed: sendTransaction HTTP 429
+2026-10-29 09:41:14,852 INFO [a4d6600b90157748] Retrying with token (85 bytes)
+2026-10-29 09:41:14,928 INFO [a4d6600b90157748] Negotiated protocol version 0x00000001 (VERSION_1)
+2026-10-29 09:41:14,929 INFO [a4d6600b90157748] ALPN negotiated protocol solana-tpu
+2026-10-29 09:41:15,212 INFO [172d2b4a2e315192] Retrying with token (85 bytes)
+2026-10-29 09:41:15,291 INFO [172d2b4a2e315192] Negotiated protocol version 0x00000001 (VERSION_1)
+2026-10-29 09:41:15,292 INFO [172d2b4a2e315192] ALPN negotiated protocol solana-tpu
+2026-10-29 09:41:15,615 INFO [d3213c299136e6f9] Negotiated protocol version 0x00000001 (VERSION_1)
+2026-10-29 09:41:15,616 INFO [d3213c299136e6f9] ALPN negotiated protocol solana-tpu
+2026-10-29 09:41:15,822 INFO submitted funding via rpc+tpu-fanout at slot 462834148 to ['rpc', '64.130.46.242:12326', '63.254.166.232:12506', '88.216.192.51:5010']
+2026-10-29 09:41:17,168 INFO [d3213c299136e6f9] Connection close received (code 0x1, reason dropped)
+2026-10-29 09:41:58,699 INFO [583ba2c915d4bcd7] Retrying with token (85 bytes)
+2026-10-29 09:41:58,784 INFO [583ba2c915d4bcd7] Negotiated protocol version 0x00000001 (VERSION_1)
+2026-10-29 09:41:58,784 INFO [583ba2c915d4bcd7] ALPN negotiated protocol solana-tpu
+2026-10-29 09:41:58,785 INFO warmed 198.13.140.105:12341 in 0.171s
+2026-10-29 09:42:01,207 INFO submitted 6 txs via tpu x2 at slot 462834367 to ['198.13.140.105:12341']
+2026-10-29 09:42:01,218 INFO warmed 198.13.140.105:12341 in 0.171s
+2026-10-29 09:42:01,612 INFO submitted 6 txs via tpu x2 at slot 462834369 to ['198.13.140.105:12341']
+2026-10-29 09:42:01,743 INFO [6d1718d2a9ae5de1] Negotiated protocol version 0x00000001 (VERSION_1)
+2026-10-29 09:42:01,744 INFO [6d1718d2a9ae5de1] ALPN negotiated protocol solana-tpu
+2026-10-29 09:42:01,744 INFO warmed 208.91.105.53:5010 in 0.007s
+2026-10-29 09:42:03,094 INFO submitted 6 txs via tpu x2 at slot 462834375 to ['208.91.105.53:5010']
+2026-10-29 09:42:03,285 INFO warmed 208.91.105.53:5010 in 0.007s
+2026-10-29 09:42:03,676 INFO submitted 6 txs via tpu x2 at slot 462834377 to ['208.91.105.53:5010']
+2026-10-29 09:42:05,251 INFO [cdf0bdbc20cce71d] Retrying with token (85 bytes)
+2026-10-29 09:42:05,336 INFO [cdf0bdbc20cce71d] Negotiated protocol version 0x00000001 (VERSION_1)
+2026-10-29 09:42:05,337 INFO [cdf0bdbc20cce71d] ALPN negotiated protocol solana-tpu
+2026-10-29 09:42:05,337 INFO warmed 198.13.140.105:12349 in 0.172s
+2026-10-29 09:42:07,632 INFO submitted 6 txs via tpu x2 at slot 462834395 to ['198.13.140.105:12349']
+2026-10-29 09:42:07,684 INFO warmed 198.13.140.105:12349 in 0.172s
+2026-10-29 09:42:08,023 INFO submitted 6 txs via tpu x2 at slot 462834397 to ['198.13.140.105:12349']
+2026-10-29 09:42:08,144 INFO [aeb04c326ac62e1a] Negotiated protocol version 0x00000001 (VERSION_1)
+2026-10-29 09:42:08,145 INFO [aeb04c326ac62e1a] ALPN negotiated protocol solana-tpu
+2026-10-29 09:42:08,146 INFO warmed 64.130.57.215:8002 in 0.089s
+2026-10-29 09:42:09,201 INFO submitted 6 txs via tpu x2 at slot 462834403 to ['64.130.57.215:8002']
+2026-10-29 09:42:09,240 INFO warmed 64.130.57.215:8002 in 0.089s
+2026-10-29 09:42:09,695 INFO submitted 6 txs via tpu x2 at slot 462834405 to ['64.130.57.215:8002']
+2026-10-29 09:42:57,849 INFO [57d738b266b7ff7a] Negotiated protocol version 0x00000001 (VERSION_1)
+2026-10-29 09:42:57,850 INFO [57d738b266b7ff7a] ALPN negotiated protocol solana-tpu
+2026-10-29 09:42:57,851 INFO warmed 5.199.172.176:12002 in 0.115s
+2026-10-29 09:43:00,440 INFO submitted 6 txs via tpu x2 at slot 462834647 to ['5.199.172.176:12002']
+2026-10-29 09:43:00,450 INFO warmed 5.199.172.176:12002 in 0.115s
+2026-10-29 09:43:00,882 INFO submitted 6 txs via tpu x2 at slot 462834649 to ['5.199.172.176:12002']
+2026-10-29 09:44:23,539 INFO [bed7c055e725fdf2] Retrying with token (85 bytes)
+2026-10-29 09:44:23,617 INFO [bed7c055e725fdf2] Negotiated protocol version 0x00000001 (VERSION_1)
+2026-10-29 09:44:23,618 INFO [bed7c055e725fdf2] ALPN negotiated protocol solana-tpu
+2026-10-29 09:44:23,619 INFO warmed 86.54.152.246:9007 in 0.165s
+2026-10-29 09:44:25,867 INFO submitted 6 txs via tpu x2 at slot 462835055 to ['86.54.152.246:9007']
+2026-10-29 09:44:25,922 INFO warmed 86.54.152.246:9007 in 0.165s
+2026-10-29 09:44:26,305 INFO submitted 6 txs via tpu x2 at slot 462835057 to ['86.54.152.246:9007']
+2026-10-29 09:44:26,608 INFO reconciled e1071-20261029T094113Z to 360310 landed lamports (ledger 420372 -> 360310)
+2026-10-29 09:44:26,609 INFO [bed7c055e725fdf2] Connection close sent (code 0x0, reason )
+LIVE
+experiment: e1071-20261029T094113Z
+source: rpc
+alpenglow regime: after (ok=True)
+planned fee: 0.000420372 SOL (420372 lamports) / cap 0.011000000 SOL
+targets: 6 families: firedancer, jito-solana, agave, harmonic-firedancer, harmonic-agave, agave-bam
+  9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY  Firedancer 26.10.4  tpu@462835056
+  HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU  JitoLabs 4.3.2  tpu@462834404
+  7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE  Agave 4.3.2  tpu@462834648
+  JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b  HarmonicFiredancer 26.10.4  tpu@462834396
+  Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk  HarmonicAgave 4.3.2  tpu@462834368
+  DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy  AgaveBam 4.4.0-rc.1  tpu@462834376
+planned transactions: 84
+signed: 84  sent: 84
+collected 40 slots into data/runs/20261029T094113Z
