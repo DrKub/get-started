@@ -16,7 +16,7 @@ def test_schema_names_the_docs_layout():
         "validators.json",
         "spend.json",
         "attempts.jsonl",
-        "blocks/<slot>.json",
+        "blocks/<slot>.json.gz",
         "run.log",
         "data/spend.json",
     ):

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import gzip
 import json
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
@@ -22,6 +23,21 @@ def dump_json(path: Path, payload: object) -> None:
         json.dumps(payload, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+
+
+def dump_json_gz(path: Path, payload: object) -> None:
+    """Compact JSON, gzipped with a fixed header so equal payloads give equal bytes."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    with path.open("wb") as handle:
+        with gzip.GzipFile(filename="", fileobj=handle, mode="wb", mtime=0, compresslevel=9) as gz:
+            gz.write(raw)
+
+
+def load_json_maybe_gz(path: Path) -> object:
+    opener = gzip.open if path.suffix == ".gz" else open
+    with opener(path, "rt", encoding="utf-8") as handle:
+        return json.load(handle)
 
 
 def write_jsonl(path: Path, rows: list[dict]) -> None:

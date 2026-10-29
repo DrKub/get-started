@@ -11,6 +11,7 @@ from measure.analyze import summarize_hypotheses
 from measure.collector import (
     block_context,
     build_observations,
+    compact_block,
     parse_block,
     slots_to_fetch,
 )
@@ -33,7 +34,15 @@ from measure.constants import (
 from measure.directory import apply_directory, fetch_genesis_cert, fetch_validators_app, fetch_vote_accounts
 from measure.errors import ConfigError, RpcError, SpendCapExceeded
 from measure.fees import lamports_to_sol_str
-from measure.io_util import dump_json, read_jsonl, redact_url, write_csv, write_jsonl
+from measure.io_util import (
+    dump_json,
+    dump_json_gz,
+    load_json_maybe_gz,
+    read_jsonl,
+    redact_url,
+    write_csv,
+    write_jsonl,
+)
 from measure.ledger import SpendLedger
 from measure.models import ClusterSnapshot, ExperimentPlan, PlannedTx, Target
 from measure.plan import build_experiment
@@ -1262,15 +1271,14 @@ def _fetch_block(rpc, slot: int, block_dir: Path, *, sleep, deadline_s: float, m
             dump_json(block_dir / f"{slot}.empty.json", {"slot": slot})
             logger.info("slot %s returned no block", slot)
             return None
-        dump_json(block_dir / f"{slot}.json", result)
+        dump_json_gz(block_dir / f"{slot}.json.gz", compact_block(result))
         return result
 
 
 def parse_block_file(path, slot: int, output_dir) -> int:
-    import json
     from pathlib import Path
 
-    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    payload = load_json_maybe_gz(Path(path))
     if isinstance(payload, dict) and "result" in payload:
         payload = payload["result"]
     if not isinstance(payload, dict):

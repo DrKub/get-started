@@ -233,10 +233,11 @@ def test_collect_skips_and_retries_without_stopping(tmp_path: Path):
         max_attempts=3,
     )
     assert (out / "blocks" / "10.skipped.json").is_file()
-    assert (out / "blocks" / "11.json").is_file()
-    assert (out / "blocks" / "12.json").is_file()
+    assert (out / "blocks" / "11.json.gz").is_file()
+    assert (out / "blocks" / "12.json.gz").is_file()
     assert (out / "blocks" / "13.unavailable.json").is_file()
-    assert (out / "blocks" / "14.json").is_file()
+    assert (out / "blocks" / "14.json.gz").is_file()
+    assert not list((out / "blocks").glob("1[124].json"))
     assert (out / "block_observations.jsonl").is_file()
 
 

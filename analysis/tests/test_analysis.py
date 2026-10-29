@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -6,6 +7,8 @@ from analysis.core import (
     classify,
     exact_directional_p_value,
     kendall_tau_b,
+    load_raw_block,
+    normalize_block,
     pair_counts,
     pooled_pair_shares,
     raw_block_checks,
@@ -112,6 +115,57 @@ class StatisticsTests(unittest.TestCase):
             raw_block_checks(block, "nonconflict", rows, {"a", "b"})
         with self.assertRaises(ValueError):
             raw_block_checks(block, "conflict", [{"signature": "a", "block_index": 1}], {"a"})
+
+    def test_full_and_compact_blocks_give_the_same_checks(self):
+        def keys(*writable):
+            return [{"pubkey": key, "signer": i == 0, "source": "transaction", "writable": True}
+                    for i, key in enumerate(writable)] + [
+                {"pubkey": "11111111111111111111111111111111", "signer": False,
+                 "source": "transaction", "writable": False}
+            ]
+
+        def full_tx(signature, *writable):
+            return {
+                "meta": {"err": None, "fee": 5000, "logMessages": ["x" * 1000]},
+                "transaction": {
+                    "signatures": [signature],
+                    "message": {"accountKeys": keys(*writable), "instructions": []},
+                },
+                "version": "legacy",
+            }
+
+        full = {
+            "rewards": [{"pubkey": "Leader", "rewardType": "Fee"}],
+            "transactions": [
+                full_tx("a", "Funder"),
+                full_tx("foreign", "Someone"),
+                full_tx("b", "Funder"),
+            ],
+        }
+        rows = [{"signature": "a", "block_index": 0}, {"signature": "b", "block_index": 2}]
+        with TemporaryDirectory() as directory:
+            run_dir = Path(directory)
+            (run_dir / "blocks").mkdir()
+            (run_dir / "blocks" / "7.json").write_text(json.dumps({"result": full}))
+            from_full = raw_block_checks(load_raw_block(run_dir, 7), "conflict", rows, {"a", "b"})
+
+            from measure.collector import compact_block
+            from measure.io_util import dump_json_gz
+
+            (run_dir / "blocks" / "7.json").unlink()
+            dump_json_gz(run_dir / "blocks" / "7.json.gz", compact_block(full))
+            compact = load_raw_block(run_dir, 7)
+            self.assertNotIn("logMessages", compact["transactions"][0]["meta"])
+            from_compact = raw_block_checks(compact, "conflict", rows, {"a", "b"})
+        self.assertEqual(from_full, from_compact)
+        self.assertEqual(from_full["block_leader"], "Leader")
+        self.assertEqual(from_full["ladder_writable_accounts"], ["Funder"])
+
+    def test_raw_json_encoding_without_writable_flags_is_rejected(self):
+        block = {"transactions": [{"transaction": {"signatures": ["a"],
+                                                   "message": {"accountKeys": ["Funder"]}}}]}
+        with self.assertRaises(ValueError):
+            normalize_block(block)
 
     def test_bootstrap_is_repeatable_and_cluster_based(self):
         rows = [

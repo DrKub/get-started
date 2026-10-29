@@ -126,7 +126,11 @@ def parse_transaction(tx: dict, index: int) -> ParsedTx:
     if isinstance(body, dict):
         message = body.get("message") if isinstance(body.get("message"), dict) else {}
         signatures = body.get("signatures") if isinstance(body.get("signatures"), list) else []
-    account_items = message.get("accountKeys") if isinstance(message.get("accountKeys"), list) else []
+    account_items = message.get("accountKeys")
+    if not isinstance(account_items, list) and isinstance(body, dict):
+        account_items = body.get("accountKeys")
+    if not isinstance(account_items, list):
+        account_items = []
     account_keys = [key for key in (_account_key(item) for item in account_items) if key]
     cu_limit = None
     cu_price = None
@@ -197,6 +201,80 @@ def parse_block(result: dict, slot: int) -> ParsedBlock:
         transactions=parsed,
         entry_index_available=entry_available,
     )
+
+
+_COMPACT_BLOCK_FIELDS = ("blockHeight", "blockTime", "blockhash", "parentSlot", "previousBlockhash", "rewards")
+_COMPACT_META_FIELDS = (
+    "computeUnitsConsumed",
+    "costUnits",
+    "err",
+    "fee",
+    "postBalances",
+    "postTokenBalances",
+    "preBalances",
+    "preTokenBalances",
+    "rewards",
+    "status",
+)
+
+
+def _account_entries(body: dict, meta: dict) -> list[dict]:
+    """``accountKeys`` as ``{pubkey, signer, source, writable}``, as RPC returns them
+    for ``transactionDetails: "accounts"``. ``jsonParsed`` already has this shape.
+    Raw ``json`` encoding has bare keys; the header and ``loadedAddresses`` give
+    the flags."""
+    if isinstance(body.get("accountKeys"), list):
+        return body["accountKeys"]
+    message = body.get("message") if isinstance(body.get("message"), dict) else {}
+    keys = message.get("accountKeys") if isinstance(message.get("accountKeys"), list) else []
+    if all(isinstance(item, dict) for item in keys):
+        return keys
+    header = message.get("header") if isinstance(message.get("header"), dict) else {}
+    signed = int(header.get("numRequiredSignatures") or 0)
+    readonly_signed = int(header.get("numReadonlySignedAccounts") or 0)
+    readonly_unsigned = int(header.get("numReadonlyUnsignedAccounts") or 0)
+    entries = []
+    for index, key in enumerate(keys):
+        signer = index < signed
+        if signer:
+            writable = index < signed - readonly_signed
+        else:
+            writable = index < len(keys) - readonly_unsigned
+        entries.append({"pubkey": key, "signer": signer, "source": "transaction", "writable": writable})
+    loaded = meta.get("loadedAddresses") if isinstance(meta.get("loadedAddresses"), dict) else {}
+    for flag, name in ((True, "writable"), (False, "readonly")):
+        for key in loaded.get(name) or []:
+            entries.append({"pubkey": key, "signer": False, "source": "lookupTable", "writable": flag})
+    return entries
+
+
+def compact_block(result: dict) -> dict:
+    """Reduce a ``getBlock`` result to the ``transactionDetails: "accounts"`` layout.
+
+    That is the stored evidence format: signatures, account keys with their
+    writable flags, fee and status per transaction, and the block rewards that
+    name the leader. A full block for one busy slot is ~30 MB of JSON; this is
+    under 1 MB gzipped. Already-compact input is returned unchanged in shape.
+    """
+    block = {name: result.get(name) for name in _COMPACT_BLOCK_FIELDS if name in result}
+    transactions = []
+    for tx in result.get("transactions") or []:
+        if not isinstance(tx, dict):
+            continue
+        body = tx.get("transaction") if isinstance(tx.get("transaction"), dict) else {}
+        meta = tx.get("meta") if isinstance(tx.get("meta"), dict) else {}
+        transactions.append(
+            {
+                "meta": {name: meta[name] for name in _COMPACT_META_FIELDS if name in meta},
+                "transaction": {
+                    "accountKeys": _account_entries(body, meta),
+                    "signatures": body.get("signatures") or [],
+                },
+                "version": tx.get("version"),
+            }
+        )
+    block["transactions"] = transactions
+    return block
 
 
 def compact_tx(tx: ParsedTx, *, ours: bool) -> dict:

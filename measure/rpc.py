@@ -254,7 +254,7 @@ class RpcClient:
                     "commitment": "confirmed",
                     "encoding": "jsonParsed",
                     "transactionDetails": "full",
-                    "rewards": False,
+                    "rewards": True,
                     "maxSupportedTransactionVersion": 1,
                 },
             ],

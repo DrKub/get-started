@@ -149,3 +149,73 @@ def test_parsed_compute_budget_shape():
     )
     assert block.transactions[0].cu_limit == 20000
     assert block.transactions[0].cu_price_micro_lamports == 123
+
+
+def test_compact_block_keeps_the_evidence_and_drops_the_bulk(tmp_path):
+    import gzip
+    import json
+    from pathlib import Path
+
+    from measure.collector import compact_block
+    from measure.io_util import dump_json_gz
+
+    full = json.loads(
+        (Path(__file__).parent / "fixtures" / "get_block_sample.json").read_text(encoding="utf-8")
+    )
+    full = full.get("result", full)
+    full["rewards"] = [{"pubkey": "Leader111", "rewardType": "Fee", "lamports": 1}]
+    compact = compact_block(full)
+
+    assert compact["rewards"] == full["rewards"]
+    assert len(compact["transactions"]) == len(full["transactions"])
+    for before, after in zip(full["transactions"], compact["transactions"]):
+        assert after["transaction"]["signatures"] == before["transaction"]["signatures"]
+        assert after["transaction"]["accountKeys"] == before["transaction"]["message"]["accountKeys"]
+        assert after["meta"]["fee"] == before["meta"]["fee"]
+        assert "logMessages" not in after["meta"]
+        assert "message" not in after["transaction"]
+
+    first, second = tmp_path / "a.json.gz", tmp_path / "b.json.gz"
+    dump_json_gz(first, compact)
+    dump_json_gz(second, compact_block(compact))
+    assert first.read_bytes() == second.read_bytes()
+    assert json.loads(gzip.decompress(first.read_bytes())) == compact
+
+    fee_payers = [tx.fee_payer for tx in parse_block(full, 1).transactions]
+    assert [tx.fee_payer for tx in parse_block(compact, 1).transactions] == fee_payers
+
+
+def test_compact_block_derives_writable_flags_from_raw_json_encoding():
+    from measure.collector import compact_block
+
+    raw = {
+        "transactions": [
+            {
+                "meta": {
+                    "fee": 5000,
+                    "loadedAddresses": {"writable": ["LutW"], "readonly": ["LutR"]},
+                },
+                "transaction": {
+                    "signatures": ["s"],
+                    "message": {
+                        "accountKeys": ["Payer", "CoSigner", "Dest", "Program"],
+                        "header": {
+                            "numRequiredSignatures": 2,
+                            "numReadonlySignedAccounts": 1,
+                            "numReadonlyUnsignedAccounts": 1,
+                        },
+                    },
+                },
+                "version": 0,
+            }
+        ]
+    }
+    keys = compact_block(raw)["transactions"][0]["transaction"]["accountKeys"]
+    assert [(k["pubkey"], k["signer"], k["writable"]) for k in keys] == [
+        ("Payer", True, True),
+        ("CoSigner", True, False),
+        ("Dest", False, True),
+        ("Program", False, False),
+        ("LutW", False, True),
+        ("LutR", False, False),
+    ]

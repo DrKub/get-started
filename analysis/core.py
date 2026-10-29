@@ -85,8 +85,30 @@ def load_raw_block(run_dir: Path, slot: int) -> dict | None:
         opener = gzip.open if name.endswith(".gz") else open
         with opener(path, "rt") as handle:
             body = json.load(handle)
-        return body.get("result", body)
+        return normalize_block(body.get("result", body))
     return None
+
+
+def normalize_block(block: dict) -> dict:
+    """Accept ``transactionDetails`` ``accounts`` (the stored format) or ``full``.
+
+    A full ``jsonParsed`` block keeps account keys under
+    ``transaction.message.accountKeys``; they are lifted to
+    ``transaction.accountKeys`` so the checks read one layout.
+    """
+    for tx in block.get("transactions") or []:
+        body = tx.get("transaction")
+        if not isinstance(body, dict) or "accountKeys" in body:
+            continue
+        message = body.get("message") or {}
+        keys = message.get("accountKeys") or []
+        if keys and not all(isinstance(key, dict) for key in keys):
+            raise ValueError(
+                "getBlock with encoding 'json' has no writable flags; "
+                "use transactionDetails 'accounts' or encoding 'jsonParsed'"
+            )
+        body["accountKeys"] = keys
+    return block
 
 
 def block_leader(block: dict) -> str | None:

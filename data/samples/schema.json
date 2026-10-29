@@ -5,7 +5,7 @@
     "validators.json": "identity, vote account, software client, version, stake, jito, tpu, classification source",
     "spend.json": "this run's planned fees, principal, and whether they were counted against the cap",
     "attempts.jsonl": "one object per transaction: signature, leader, ladder, fee, cu limit, cu price, priority score, send index, target slot, tpu host and port, landed slot, block index, submitted",
-    "blocks/<slot>.json": "raw getBlock response used to assign indexes. Empty until a collect after a live send.",
+    "blocks/<slot>.json.gz": "getBlock reduced to the transactionDetails accounts layout (signatures, account keys with writable flags, fee, status, block rewards), gzipped with a fixed header. Empty until a collect after a live send.",
     "run.log": "stdout copy of the run summary",
     "data/spend.json": "global lamports signed across runs. Survives a container restart."
   }
