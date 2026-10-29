@@ -314,6 +314,7 @@ def manifest_dict(plan: ExperimentPlan, config: Config) -> dict:
             "cap_lamports": config.spend_cap_lamports,
             "cap_sol": lamports_to_sol_str(config.spend_cap_lamports),
             "hard_cap_lamports": HARD_CAP_LAMPORTS,
+            "run_cap_lamports": config.run_spend_cap_lamports,
             "net_lamports": plan.total_fee_lamports,
             "net_sol": lamports_to_sol_str(plan.total_fee_lamports),
             "peak_lamports": plan.projected_outlay_lamports,
@@ -373,6 +374,11 @@ def _summary(
         "source": plan.snapshot.source,
         "spend_cap_lamports": config.spend_cap_lamports,
         "spend_cap_sol": lamports_to_sol_str(config.spend_cap_lamports),
+        "run_spend_cap_sol": (
+            lamports_to_sol_str(config.run_spend_cap_lamports)
+            if config.run_spend_cap_lamports is not None
+            else None
+        ),
         "spent_estimate_lamports": spent_lamports,
         "target_validators": len(plan.targets),
         "targets_preview": [
@@ -414,7 +420,12 @@ def format_summary(summary: dict) -> str:
             "planned fee: "
             f"{summary['planned_fee_sol']} SOL "
             f"({summary['planned_fee_lamports']} lamports) "
-            f"/ cap {summary['spend_cap_sol']} SOL"
+            f"/ cumulative cap {summary['spend_cap_sol']} SOL"
+            + (
+                f", run cap {summary['run_spend_cap_sol']} SOL"
+                if summary.get("run_spend_cap_sol")
+                else ""
+            )
         ),
         (
             "net after sweep: "
@@ -471,6 +482,7 @@ def write_plan_files(
         run_dir / "spend.json",
         {
             "cap_lamports": config.spend_cap_lamports,
+            "run_cap_lamports": config.run_spend_cap_lamports,
             "counted_against_cap": False,
             "funding_principal_lamports": plan.funding_principal_lamports,
             "halt_reason": summary.get("aborted"),
@@ -523,7 +535,11 @@ def _prepare(config: Config, *, cap_remaining: int, rent_lamports: int) -> tuple
 def run_measure(config: Config) -> int:
     if config.mode_warning:
         logger.warning("%s", config.mode_warning)
-    ledger = SpendLedger(config.data_dir / "spend.json", config.spend_cap_lamports)
+    ledger = SpendLedger(
+        config.data_dir / "spend.json",
+        config.spend_cap_lamports,
+        run_cap_lamports=config.run_spend_cap_lamports,
+    )
     rent = _rent_lamports(config)
     genesis = None
     if config.fixture_dir is None:
@@ -532,6 +548,7 @@ def run_measure(config: Config) -> int:
         except RpcError as exc:
             genesis = {"available": False, "error": str(exc), "slot": None}
     plan, main_keypair = _prepare(config, cap_remaining=ledger.remaining(), rent_lamports=rent)
+    ledger.run_id = plan.experiment_id
     run_dir = _run_dir(config)
     if not plan.regime_ok:
         summary = _summary(plan, config, aborted="regime", exit_code=4)

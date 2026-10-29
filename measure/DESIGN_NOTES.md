@@ -7,7 +7,7 @@ Python 3.12. The README has the operator view and `docs/METHODOLOGY.md` the desi
 All variables, with defaults, are in the README's environment table; `measure/config.py` reads them. Points that are easy to miss:
 
 - `MODE=live` and `--live` are aliases. Either one sends. Any other `MODE` value, or none, stays on dry-run. `LIVE=1` does nothing.
-- `SPEND_CAP_SOL` above the 0.05 SOL hard cap is a startup error.
+- `SPEND_CAP_SOL` is cumulative over `data/spend.json`, and above the 0.05 SOL hard cap it is a startup error. The ledger keeps the lowest value ever used. `RUN_SPEND_CAP_SOL` (`--run-spend-cap-sol`) is an optional per-run cap on top. It counts the run's reservations net of releases, plus entries tagged `<run>:sweep`, and it is not stored.
 - `KEYPAIR_PATH` is mounted read-only at `/keys/id.json`. An unset dry-run uses an ephemeral key.
 - `RPC_URL` is logged with userinfo and query stripped. `VALIDATORS_APP_TOKEN` is sent only as the `Token` header and never logged.
 - `SEND_ORDER` (`ascending`, `descending`, `shuffled`), `SEND_ORDER_SEED`, `LADDERS` (`both`, `conflict`), `TPU_COPIES` (default 1), and `COLLECT` (`1`/`true`/`yes`) mirror the `run` flags `--send-order`, `--send-order-seed`, `--ladders`, `--tpu-copies`, and `--collect`.

@@ -86,7 +86,8 @@ All variables are read by `measure/config.py`. Compose passes each one through w
 | `MODE` | `dry-run` | `live` sends. Anything else is a dry-run. |
 | `RPC_URL` | `https://api.mainnet-beta.solana.com` | JSON-RPC for `getSlotLeaders`, `getClusterNodes`, `getVoteAccounts`, `getEpochInfo`, `getLatestBlockhash`, `getSignatureStatuses`, `getTransaction`, `getBlock`. The public endpoint rate-limits collection; use a keyed URL for a live run. |
 | `WS_URL` | derived from `RPC_URL` | `slotSubscribe` for the slot clock. |
-| `SPEND_CAP_SOL` | `0.05` | Fee cap. Values above the hard cap of 0.05 SOL are a startup error. |
+| `SPEND_CAP_SOL` | `0.05` | **Cumulative** fee cap: the total of every run in `data/spend.json`, not this run. Values above 0.05 SOL are a startup error. The lowest value ever used is stored in the ledger and keeps applying, so a later larger value does not raise it. With 760,600 lamports already spent, `SPEND_CAP_SOL=0.0005` therefore refuses any run. |
+| `RUN_SPEND_CAP_SOL` | unset | Per-run fee cap (this run's fees plus its sweep), checked in addition to the cumulative cap. Not stored. Use this to bound a single run. Flag: `--run-spend-cap-sol`. |
 | `KEYPAIR_PATH` | unset | Host path to a Solana CLI `id.json`, mounted read-only. Required for live. |
 | `VALIDATORS_APP_TOKEN` | unset | Optional. When set, validators.app `software_client` replaces RPC `clientId`. Both runs used `clientId`. |
 | `LOOKAHEAD_SLOTS` | `16000` | How far ahead to scan the leader schedule. |

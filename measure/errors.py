@@ -13,12 +13,16 @@ class RpcError(MeasureError):
 class SpendCapExceeded(MeasureError):
     """The next fee would push the estimated spend past the cap."""
 
-    def __init__(self, spent: int, attempted: int, cap: int) -> None:
+    def __init__(self, spent: int, attempted: int, cap: int, *, scope: str = "cumulative") -> None:
         self.spent = spent
         self.attempted = attempted
         self.cap = cap
+        self.scope = scope
+        name = "per-run spend cap (RUN_SPEND_CAP_SOL)" if scope == "run" else (
+            "cumulative spend cap (SPEND_CAP_SOL, all runs in data/spend.json)"
+        )
         super().__init__(
-            "spend cap exceeded: "
+            f"{name} exceeded: "
             f"spent {spent} + next {attempted} > cap {cap} lamports"
         )
 

@@ -68,6 +68,7 @@ class Config:
     send_order: str = DEFAULT_SEND_ORDER
     send_order_seed: int | None = None
     ladders: str = "both"
+    run_spend_cap_lamports: int | None = None
 
     @property
     def spend_cap_sol(self) -> str:
@@ -79,6 +80,7 @@ def config_from_env() -> dict:
     return {
         "rpc_url": _env("RPC_URL") or DEFAULT_RPC_URL,
         "spend_cap_sol": _env("SPEND_CAP_SOL") or lamports_to_sol_str(DEFAULT_CAP_LAMPORTS),
+        "run_spend_cap_sol": _env("RUN_SPEND_CAP_SOL"),
         "lookahead_slots": _positive_int(
             "LOOKAHEAD_SLOTS", _env("LOOKAHEAD_SLOTS") or str(DEFAULT_LOOKAHEAD_SLOTS)
         ),
@@ -152,9 +154,12 @@ def make_config(
     send_order: str | None = None,
     send_order_seed: int | None = None,
     ladders: str | None = None,
+    run_spend_cap_sol: str | None = None,
 ) -> Config:
     env = config_from_env()
     cap = resolve_spend_cap(spend_cap_sol or env["spend_cap_sol"])
+    run_cap_text = run_spend_cap_sol or env["run_spend_cap_sol"]
+    run_cap = resolve_spend_cap(run_cap_text) if run_cap_text else None
     enabled, mode_label, mode_warning = resolve_mode(live, env["mode"])
     config = Config(
         rpc_url=rpc_url or env["rpc_url"],
@@ -182,6 +187,7 @@ def make_config(
         send_order=(send_order or env["send_order"]).lower(),
         send_order_seed=env["send_order_seed"] if send_order_seed is None else send_order_seed,
         ladders=(ladders or env["ladders"]).lower(),
+        run_spend_cap_lamports=run_cap,
     )
     _validate(config)
     return config

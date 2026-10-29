@@ -38,7 +38,16 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--collect", action="store_true", help="after a live send, fetch getBlock")
     run.add_argument("--fixture-dir", default=None, help="offline snapshot directory, no RPC")
     run.add_argument("--keypair", default=None, help="Solana CLI keypair JSON; overrides KEYPAIR_PATH")
-    run.add_argument("--spend-cap-sol", default=None)
+    run.add_argument(
+        "--spend-cap-sol",
+        default=None,
+        help="cumulative fee cap over every run in data/spend.json (max 0.05; a lower value sticks)",
+    )
+    run.add_argument(
+        "--run-spend-cap-sol",
+        default=None,
+        help="fee cap for this run alone, checked alongside the cumulative cap",
+    )
     run.add_argument("--lookahead", type=int, default=None)
     run.add_argument("--min-lead-slots", type=int, default=None)
     run.add_argument("--target-validators", type=int, default=None)
@@ -155,6 +164,7 @@ def _dispatch(args: argparse.Namespace) -> int:
     config = make_config(
         rpc_url=args.rpc_url,
         spend_cap_sol=args.spend_cap_sol,
+        run_spend_cap_sol=args.run_spend_cap_sol,
         lookahead_slots=args.lookahead,
         min_lead_slots=args.min_lead_slots,
         target_validators=args.target_validators,

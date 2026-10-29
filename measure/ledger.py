@@ -3,6 +3,12 @@
 A new run directory does not reset this file. Dry-run signatures are not
 appended. Live reserves each fee before signing and writes the file
 immediately, so a restart continues the same cap.
+
+Two caps apply. ``cap_lamports`` (``SPEND_CAP_SOL``) bounds the cumulative
+total of every run that used this file, and the lowest value ever passed is
+the one kept: a later, larger ``SPEND_CAP_SOL`` does not raise it. The
+optional ``run_cap_lamports`` (``RUN_SPEND_CAP_SOL``) bounds this run's own
+net fees, including its sweep, and is never written to the file.
 """
 
 from __future__ import annotations
@@ -16,9 +22,18 @@ from measure.errors import SpendCapExceeded
 
 
 class SpendLedger:
-    def __init__(self, path: Path, cap_lamports: int) -> None:
+    def __init__(
+        self,
+        path: Path,
+        cap_lamports: int,
+        *,
+        run_cap_lamports: int | None = None,
+        run_id: str | None = None,
+    ) -> None:
         self.path = path
         self.cap_lamports = cap_lamports
+        self.run_cap_lamports = run_cap_lamports
+        self.run_id = run_id
         self.spent_lamports = 0
         self.entries: list[dict] = []
         self._load()
@@ -33,14 +48,32 @@ class SpendLedger:
         if isinstance(stored_cap, int) and stored_cap > 0:
             self.cap_lamports = min(self.cap_lamports, stored_cap)
 
+    def run_spent_lamports(self) -> int:
+        """Net fees of ``run_id``, including entries tagged ``<run_id>:sweep``."""
+        if not self.run_id:
+            return 0
+        prefix = f"{self.run_id}:"
+        return sum(
+            int(entry.get("lamports") or 0)
+            for entry in self.entries
+            if entry.get("run_id") == self.run_id or str(entry.get("run_id") or "").startswith(prefix)
+        )
+
     def remaining(self) -> int:
-        return self.cap_lamports - self.spent_lamports
+        remaining = self.cap_lamports - self.spent_lamports
+        if self.run_cap_lamports is not None:
+            remaining = min(remaining, self.run_cap_lamports - self.run_spent_lamports())
+        return remaining
 
     def ensure_fits(self, fee_lamports: int) -> None:
         if fee_lamports < 0:
             raise ValueError("fee must be non-negative")
         if self.spent_lamports + fee_lamports > self.cap_lamports:
             raise SpendCapExceeded(self.spent_lamports, fee_lamports, self.cap_lamports)
+        if self.run_cap_lamports is not None:
+            run_spent = self.run_spent_lamports()
+            if run_spent + fee_lamports > self.run_cap_lamports:
+                raise SpendCapExceeded(run_spent, fee_lamports, self.run_cap_lamports, scope="run")
 
     def reserve(self, fee_lamports: int, *, run_id: str, seq: int, reason: str) -> None:
         """Count a signature that is about to be submitted. Persists before return."""

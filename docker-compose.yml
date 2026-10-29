@@ -17,6 +17,7 @@ services:
       RPC_URL: ${RPC_URL:-https://api.mainnet-beta.solana.com}
       WS_URL: ${WS_URL:-}
       SPEND_CAP_SOL: ${SPEND_CAP_SOL:-0.05}
+      RUN_SPEND_CAP_SOL: ${RUN_SPEND_CAP_SOL:-}
       VALIDATORS_APP_TOKEN: ${VALIDATORS_APP_TOKEN:-}
       DATA_DIR: /data
       KEYPAIR_PATH: /keys/id.json

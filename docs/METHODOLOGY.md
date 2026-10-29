@@ -312,7 +312,7 @@ As built: the conflict ladder targets the first slot of the leader's four-slot w
 
 `0.05 SOL` = 50,000,000 lamports is the default and the maximum the process will accept.
 
-The ledger is global: `data/spend.json` (`measure/ledger.py`), shared by every run and gitignored. Each run also writes its own entries to `data/runs/<run>/spend.json`. A batch's fees are reserved in the ledger before that batch is signed, and a reservation that would cross the cap stops the run (exit code 3). Counted:
+The ledger is global: `data/spend.json` (`measure/ledger.py`), shared by every run and gitignored. `SPEND_CAP_SOL` is therefore a **cumulative** cap over all runs in that file, not a per-run budget. The lowest value ever used is written to the ledger and keeps applying, so a later, larger `SPEND_CAP_SOL` does not raise it. A separate, optional `RUN_SPEND_CAP_SOL` (`--run-spend-cap-sol`) bounds one run's own net fees, including its sweep, and is checked in addition to the cumulative cap. It is not persisted. Before run 5 the ledger already held 760,600 lamports, so `SPEND_CAP_SOL=0.0005` refused the run outright. It was run with a cumulative cap of 0.0012606 SOL instead, which allowed 500,000 lamports more. Each run also writes its own entries to `data/runs/<run>/spend.json`. A batch's fees are reserved in the ledger before that batch is signed, and a reservation that would cross the cap stops the run (exit code 3). Counted:
 
 - base fee of 5,000 lamports per signature
 - priority fee of that transaction

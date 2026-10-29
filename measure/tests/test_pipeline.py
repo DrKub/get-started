@@ -172,3 +172,20 @@ def test_key_command_prints_pubkey_without_sending(tmp_path, monkeypatch):
     monkeypatch.setattr("measure.keyinfo.RpcClient", _Rpc)
     code = main(["key", "--keypair", str(path), "--rpc-url", "http://127.0.0.1:9"])
     assert code == 0
+
+
+def test_run_spend_cap_admits_or_stops_a_conflict_only_plan(tmp_path, monkeypatch):
+    monkeypatch.delenv("MODE", raising=False)
+    fits = tmp_path / "fits"
+    assert run_measure(_config(fits, ladders="conflict", run_spend_cap_sol="0.0002")) == 0
+    manifest = json.loads((fits / "out" / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["spend"]["net_lamports"] == 180_186
+    assert manifest["spend"]["run_cap_lamports"] == 200_000
+
+    blocked = tmp_path / "blocked"
+    assert run_measure(_config(blocked, ladders="conflict", run_spend_cap_sol="0.0001")) == 3
+    log = (blocked / "out" / "run.log").read_text(encoding="utf-8")
+    assert "aborted: spend_cap" in log
+    assert "run cap 0.000100000 SOL" in log
+    rows = (blocked / "out" / "attempts.jsonl").read_text(encoding="utf-8").splitlines()
+    assert all(json.loads(row)["signed"] is False for row in rows)
