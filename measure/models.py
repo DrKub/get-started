@@ -48,6 +48,11 @@ class Target:
     gossip: str | None
     windows_available: int
     assigned: list[AssignedWindow]
+    vote_account: str | None = None
+    active_stake_lamports: int = 0
+    jito: bool | None = None
+    classification_source: str = "rpc"
+    outside_top10_stake: bool = False
 
 
 @dataclass
@@ -84,10 +89,17 @@ class PlannedTx:
     memo: str = ""
     payer: str = ""
     payer_source: str = ""
+    recipient: str = ""
+    transfer_lamports: int = 0
+    ladder: str = ""
+    role: str = "probe"
+    priority_score: int = 0
     recent_blockhash: str = ""
     unsigned_message_base64: str = ""
+    signature: str | None = None
     signed: bool = False
     sent: bool = False
+    submitted: bool = False
 
 
 @dataclass
@@ -102,5 +114,9 @@ class ExperimentPlan:
     regime: str
     regime_ok: bool
     total_fee_lamports: int
+    funding_principal_lamports: int
+    projected_outlay_lamports: int
+    conflict_rungs: tuple[int, ...]
+    nonconflict_rungs: tuple[int, ...]
     snapshot: ClusterSnapshot
     warnings: list[str] = field(default_factory=list)

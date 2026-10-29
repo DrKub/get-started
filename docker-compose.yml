@@ -1,24 +1,25 @@
-# Dry-run against mainnet public RPC. Nothing is signed or sent.
-# `docker compose up --build` is the one-command reproduction.
+# Dry-run is the default. MODE=live is the same switch as `run --live`.
+# Host networking keeps mainnet RPC and leader QUIC off the bridge NAT.
 services:
   measure:
-    build: .
+    build:
+      context: ./measure
     image: solana-validator-order-measure:local
     init: true
-    # Host networking so mainnet RPC and leader TPU QUIC are not NATed.
     network_mode: host
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     environment:
+      MODE: ${MODE:-dry-run}
       RPC_URL: ${RPC_URL:-https://api.mainnet-beta.solana.com}
       SPEND_CAP_SOL: ${SPEND_CAP_SOL:-0.05}
+      VALIDATORS_APP_TOKEN: ${VALIDATORS_APP_TOKEN:-}
+      DATA_DIR: /data
+      KEYPAIR_PATH: /keys/id.json
       LOOKAHEAD_SLOTS: ${LOOKAHEAD_SLOTS:-16000}
       MIN_LEAD_SLOTS: ${MIN_LEAD_SLOTS:-16}
       TARGET_VALIDATORS: ${TARGET_VALIDATORS:-6}
       MIN_CLIENT_FAMILIES: ${MIN_CLIENT_FAMILIES:-3}
-      TPU_REPEATS: ${TPU_REPEATS:-2}
-      RPC_REPEATS: ${RPC_REPEATS:-1}
-      OUTPUT_DIR: /app/data/raw
-      KEYPAIR_PATH: ${KEYPAIR_PATH:-}
     volumes:
-      - ./data:/app/data
+      - ./data:/data
+      - ${KEYPAIR_PATH:-/dev/null}:/keys/id.json:ro
     command: ["run"]

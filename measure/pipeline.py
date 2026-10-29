@@ -17,18 +17,28 @@ from measure.config import Config
 from measure.constants import (
     ALPENGLOW_ACTIVATION_EPOCH,
     ALPENGLOW_ACTIVATION_UTC,
+    ALPENGLOW_CUTOFF_SLOT,
     ALPENGLOW_SOURCE,
+    BURST_OFFSET_SLOTS,
+    CU_LIMIT,
+    CU_LIMIT_PROBE,
     HARD_CAP_LAMPORTS,
-    HYPOTHESES,
+    LADDER_PRIORITY_FEES,
+    MAX_SUPPORTED_TRANSACTION_VERSION,
+    QUIC_WARMUP_SLOTS,
+    RETRIES_INSIDE_WINDOW,
+    TRANSACTION_FORMAT,
 )
+from measure.directory import apply_directory, fetch_genesis_cert, fetch_validators_app, fetch_vote_accounts
 from measure.errors import ConfigError, RpcError, SpendCapExceeded
-from measure.fees import SpendGuard, lamports_to_sol_str
+from measure.fees import lamports_to_sol_str
 from measure.io_util import dump_json, read_jsonl, redact_url, write_csv, write_jsonl
+from measure.ledger import SpendLedger
 from measure.models import ClusterSnapshot, ExperimentPlan, PlannedTx, Target
-from measure.plan import build_experiment, window_fee_lamports
+from measure.plan import build_experiment
 from measure.rpc import RpcClient
 from measure.snapshot_io import load_snapshot
-from measure.txbuild import attach_unsigned_messages, dry_run_payer, load_keypair
+from measure.txbuild import attach_unsigned_messages, load_keypair, sign_transaction
 
 logger = logging.getLogger("measure")
 
@@ -124,12 +134,86 @@ def _tail_is_complete(snapshot: ClusterSnapshot, config: Config) -> bool:
     return len(snapshot.leaders) >= remaining or len(snapshot.leaders) < config.lookahead_slots
 
 
-def _payer_for(config: Config):
+def _main_keypair(config: Config):
+    from solders.keypair import Keypair
+
     if config.keypair_path is not None and config.keypair_path.is_file():
-        pubkey = load_keypair(config.keypair_path).pubkey()
-        source = "keypair-live" if config.live else "keypair-pubkey-only"
-        return pubkey, source
-    return dry_run_payer(), "dry-run-placeholder"
+        keypair = load_keypair(config.keypair_path)
+        source = "keypair"
+        return keypair, source
+    return Keypair(), "ephemeral-dry-run"
+
+
+def _git_sha() -> str | None:
+    import subprocess
+
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+
+def _attempt_row(tx: PlannedTx) -> dict:
+    host, _, port = (tx.tpu_quic or "").rpartition(":")
+    return {
+        "block_index": None,
+        "cu_limit": tx.cu_limit,
+        "cu_price": tx.cu_price_micro_lamports,
+        "error": None,
+        "fee_lamports": tx.fee_lamports,
+        "ladder": tx.ladder,
+        "landed_slot": None,
+        "leader_identity": tx.identity or None,
+        "priority_fee_lamports": tx.priority_fee_lamports,
+        "priority_score": tx.priority_score,
+        "role": tx.role,
+        "send_index": tx.send_index,
+        "send_unix_ms": None,
+        "seq": tx.seq,
+        "signature": tx.signature,
+        "signed": tx.signed,
+        "submitted": False,
+        "target_slot": tx.planned_slot,
+        "tpu_host": host or None,
+        "tpu_port": int(port) if port.isdigit() else None,
+    }
+
+
+def _sign_plan(plan: ExperimentPlan, main_keypair, blockhash: str) -> None:
+    signers = {str(main_keypair.pubkey()): main_keypair}
+    signers.update(getattr(plan, "ephemeral_signers", {}))
+    for tx in plan.txs:
+        signer = signers.get(tx.payer)
+        if signer is None:
+            tx.signed = False
+            tx.signature = None
+            continue
+        _raw, signature = sign_transaction(tx, signer, blockhash)
+        del _raw
+        tx.signature = signature
+        tx.signed = True
+        tx.submitted = False
+        tx.sent = False
+    if hasattr(plan, "ephemeral_signers"):
+        del plan.ephemeral_signers
+
+
+def _run_dir(config: Config) -> Path:
+    if config.output_dir is not None:
+        config.output_dir.mkdir(parents=True, exist_ok=True)
+        return config.output_dir
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    path = config.data_dir / "runs" / stamp
+    suffix = 2
+    while path.exists():
+        path = config.data_dir / "runs" / f"{stamp}-{suffix}"
+        suffix += 1
+    path.mkdir(parents=True)
+    return path
 
 
 def manifest_dict(plan: ExperimentPlan, config: Config) -> dict:
@@ -151,13 +235,25 @@ def manifest_dict(plan: ExperimentPlan, config: Config) -> dict:
         "blockhash": snapshot.blockhash,
         "client_families": families,
         "client_ids": [target.client_id for target in plan.targets],
+        "alpenglow_cutoff_slot": ALPENGLOW_CUTOFF_SLOT,
+        "burst_offset_slots": BURST_OFFSET_SLOTS,
+        "cu_limit": CU_LIMIT,
+        "cu_limit_probe": CU_LIMIT_PROBE,
         "design": {
-            "hypotheses": list(HYPOTHESES),
+            "conflict_rungs": list(plan.conflict_rungs),
+            "fee_rungs_lamports": list(LADDER_PRIORITY_FEES),
             "jito_bundles": "out_of_scope",
-            "per_window_fee_lamports": window_fee_lamports(),
-            "primary_evidence": "self_sent_transactions",
-            "write_lock": "single_fee_payer",
+            "nonconflict_rungs": list(plan.nonconflict_rungs),
+            "primary_evidence": "self_sent_signatures",
+            "retries_inside_window": RETRIES_INSIDE_WINDOW,
+            "submit_path": "tpu",
+            "transmission_order": "lowest fee first",
         },
+        "max_supported_transaction_version": MAX_SUPPORTED_TRANSACTION_VERSION,
+        "mode": config.mode,
+        "permutation_seed": 0,
+        "quic_warmup_slots": QUIC_WARMUP_SLOTS,
+        "transaction_format": TRANSACTION_FORMAT,
         "epoch": snapshot.epoch,
         "exclusion_counts": plan.exclusion_counts,
         "experiment_id": plan.experiment_id,
@@ -260,7 +356,7 @@ def format_summary(summary: dict) -> str:
     if summary["live"]:
         mode = "LIVE"
     else:
-        mode = "DRY-RUN (nothing signed or sent)"
+        mode = "DRY-RUN (signed in memory, nothing submitted)"
     lines = [
         mode,
         f"experiment: {summary['experiment_id']}",
@@ -301,56 +397,93 @@ def format_summary(summary: dict) -> str:
     return "\n".join(lines)
 
 
-def write_plan_files(plan: ExperimentPlan, config: Config, summary: dict) -> None:
-    out = config.output_dir
-    out.mkdir(parents=True, exist_ok=True)
-    dump_json(out / "manifest.json", manifest_dict(plan, config))
-    dump_json(out / "run_summary.json", summary)
-    rows = [asdict(tx) for tx in plan.txs]
-    write_jsonl(out / "planned_transactions.jsonl", rows)
-    write_csv(out / "planned_transactions.csv", rows, PLANNED_FIELDS)
+def write_plan_files(
+    plan: ExperimentPlan,
+    config: Config,
+    summary: dict,
+    run_dir: Path,
+    *,
+    ledger: SpendLedger,
+    genesis: dict | None = None,
+) -> None:
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "blocks").mkdir(exist_ok=True)
+    manifest = manifest_dict(plan, config)
+    manifest["genesis_certificate"] = genesis
+    manifest["git_sha"] = _git_sha()
+    manifest["run_dir"] = str(run_dir)
+    dump_json(run_dir / "manifest.json", manifest)
+    dump_json(run_dir / "validators.json", [_target_dict(target) for target in plan.targets])
+    dump_json(
+        run_dir / "spend.json",
+        {
+            "cap_lamports": config.spend_cap_lamports,
+            "counted_against_cap": False,
+            "funding_principal_lamports": plan.funding_principal_lamports,
+            "halt_reason": summary.get("aborted"),
+            "ledger_path": str(ledger.path),
+            "ledger_spent_before_lamports": ledger.spent_lamports,
+            "planned_fee_lamports": plan.total_fee_lamports,
+            "projected_outlay_lamports": plan.projected_outlay_lamports,
+            "signed_lamports": summary.get("signed_count", 0) and plan.total_fee_lamports,
+        },
+    )
+    write_jsonl(run_dir / "attempts.jsonl", [_attempt_row(tx) for tx in plan.txs])
+    text = format_summary(summary)
+    (run_dir / "run.log").write_text(text + "\n", encoding="utf-8")
+    print(text)
 
 
-def _prepare(config: Config) -> ExperimentPlan:
+def _prepare(config: Config, *, cap_remaining: int, rent_lamports: int) -> tuple[ExperimentPlan, object]:
     if config.fixture_dir is not None:
         snapshot = load_snapshot(config.fixture_dir)
     else:
         snapshot = fetch_snapshot(RpcClient(config.rpc_url, timeout_s=config.timeout_s), config)
+        rpc = RpcClient(config.rpc_url, timeout_s=config.timeout_s)
+        votes = fetch_vote_accounts(rpc)
+        app_rows = None
+        if config.validators_app_token:
+            app_rows = fetch_validators_app(config.validators_app_token, timeout_s=config.timeout_s)
+        apply_directory(snapshot.nodes, votes, app_rows)
+    main, payer_source = _main_keypair(config)
     plan = build_experiment(
         snapshot,
         experiment_id=config.experiment_id,
         min_lead_slots=config.min_lead_slots,
         target_validators=config.target_validators,
         min_client_families=config.min_client_families,
-        tpu_repeats=config.tpu_repeats,
-        rpc_repeats=config.rpc_repeats,
         tail_is_complete=_tail_is_complete(snapshot, config),
+        cap_remaining_lamports=cap_remaining,
+        rent_lamports=rent_lamports,
+        main_payer=str(main.pubkey()),
     )
-    payer, payer_source = _payer_for(config)
-    attach_unsigned_messages(
-        plan.txs,
-        payer=payer,
-        blockhash=snapshot.blockhash,
-        payer_source=payer_source,
-    )
-    return plan
+    attach_unsigned_messages(plan.txs, blockhash=snapshot.blockhash, payer_source=payer_source)
+    return plan, main
 
 
 def run_measure(config: Config) -> int:
-    plan = _prepare(config)
+    if config.mode_warning:
+        logger.warning("%s", config.mode_warning)
+    ledger = SpendLedger(config.data_dir / "spend.json", config.spend_cap_lamports)
+    rent = _rent_lamports(config)
+    genesis = None
+    if config.fixture_dir is None:
+        try:
+            genesis = fetch_genesis_cert(RpcClient(config.rpc_url, timeout_s=config.timeout_s))
+        except RpcError as exc:
+            genesis = {"available": False, "error": str(exc), "slot": None}
+    plan, main_keypair = _prepare(config, cap_remaining=ledger.remaining(), rent_lamports=rent)
+    run_dir = _run_dir(config)
     if not plan.regime_ok:
         summary = _summary(plan, config, aborted="regime", exit_code=4)
-        write_plan_files(plan, config, summary)
-        print(format_summary(summary))
+        write_plan_files(plan, config, summary, run_dir, ledger=ledger, genesis=genesis)
         return 4
     if not plan.selection_ok:
         summary = _summary(plan, config, aborted="selection", exit_code=2)
-        write_plan_files(plan, config, summary)
-        print(format_summary(summary))
+        write_plan_files(plan, config, summary, run_dir, ledger=ledger, genesis=genesis)
         return 2
-    guard = SpendGuard(config.spend_cap_lamports)
     try:
-        guard.approve_batch([tx.fee_lamports for tx in plan.txs])
+        ledger.ensure_fits(plan.total_fee_lamports)
     except SpendCapExceeded as exc:
         summary = _summary(
             plan,
@@ -359,67 +492,114 @@ def run_measure(config: Config) -> int:
             exit_code=3,
             extra={"spend_cap_error": str(exc)},
         )
-        write_plan_files(plan, config, summary)
-        print(format_summary(summary))
+        write_plan_files(plan, config, summary, run_dir, ledger=ledger, genesis=genesis)
         return 3
     if not config.live:
-        summary = _summary(plan, config, aborted=None, exit_code=0)
-        write_plan_files(plan, config, summary)
-        print(format_summary(summary))
+        _sign_plan(plan, main_keypair, plan.snapshot.blockhash)
+        del main_keypair
+        summary = _summary(
+            plan,
+            config,
+            aborted=None,
+            exit_code=0,
+            signed_count=sum(1 for tx in plan.txs if tx.signed),
+        )
+        write_plan_files(plan, config, summary, run_dir, ledger=ledger, genesis=genesis)
         return 0
     if config.keypair_path is None or not config.keypair_path.is_file():
         summary = _summary(plan, config, aborted="missing_keypair", exit_code=5)
-        write_plan_files(plan, config, summary)
-        print(format_summary(summary))
+        write_plan_files(plan, config, summary, run_dir, ledger=ledger, genesis=genesis)
         return 5
-    return _run_live(plan, config)
+    return _run_live(plan, config, run_dir, ledger, genesis)
 
 
-def _run_live(plan: ExperimentPlan, config: Config) -> int:
-    # Imported here so a dry-run never needs to construct a sender.
-    from measure.live import execute_live
-    from measure.tpu import RpcSender, TpuSender
+def _rent_lamports(config: Config) -> int:
+    from measure.constants import DEFAULT_RENT_LAMPORTS
+
+    if config.fixture_dir is not None:
+        return DEFAULT_RENT_LAMPORTS
+    try:
+        result = RpcClient(config.rpc_url, timeout_s=config.timeout_s).call(
+            "getMinimumBalanceForRentExemption",
+            [0],
+        )
+        if isinstance(result, int) and result > 0:
+            return result
+    except RpcError as exc:
+        logger.warning("rent exemption lookup failed, using %s: %s", DEFAULT_RENT_LAMPORTS, exc)
+    return DEFAULT_RENT_LAMPORTS
+
+
+def _run_live(plan: ExperimentPlan, config: Config, run_dir: Path, ledger: SpendLedger, genesis) -> int:
+    """Reserve the global cap, sign, and submit each slot group once.
+
+    A failed send is not retried. The reserved fee stays on the ledger
+    because the bytes may already have left the process.
+    """
+    from measure.tpu import TpuSender
+
+    from measure.live import wait_for_slot
 
     keypair = load_keypair(config.keypair_path)
+    signers = {str(keypair.pubkey()): keypair, **getattr(plan, "ephemeral_signers", {})}
     rpc = RpcClient(config.rpc_url, timeout_s=config.timeout_s)
-    destination = redact_url(config.rpc_url)
-    result = execute_live(
-        plan,
-        keypair=keypair,
-        rpc=rpc,
-        tpu_sender=TpuSender(),
-        rpc_sender=RpcSender(rpc),
-        cap_lamports=config.spend_cap_lamports,
-        rpc_destination=destination,
-    )
-    write_jsonl(config.output_dir / "sent_transactions.jsonl", result.rows)
-    extra = {"live_aborted": result.aborted_reason}
-    if config.collect and result.sent_count:
+    sender = TpuSender()
+    aborted = None
+    sent = 0
+    groups: dict[int, list] = {}
+    for tx in plan.txs:
+        groups.setdefault(tx.planned_slot, []).append(tx)
+    for slot in sorted(groups):
+        batch = groups[slot]
         try:
-            _collect_live(rpc, plan, result.rows, config)
-            extra["collect"] = "ok"
-        except (RpcError, OSError, ValueError) as exc:
-            logger.error("collect failed: %s", exc)
-            extra["collect"] = f"failed: {exc}"
-    exit_code = 0
-    aborted = result.aborted_reason
-    if result.aborted_reason == "spend_cap":
-        exit_code = 3
-    elif result.sent_count == 0:
-        exit_code = 1
-        aborted = aborted or "nothing_sent"
+            for tx in batch:
+                ledger.reserve(tx.fee_lamports, run_id=plan.experiment_id, seq=tx.seq, reason="signed")
+        except SpendCapExceeded:
+            aborted = "spend_cap"
+            break
+        if not batch[0].tpu_quic:
+            for tx in batch:
+                tx.signed = False
+            continue
+        try:
+            slot_now = wait_for_slot(rpc, max(slot - BURST_OFFSET_SLOTS, 0))
+        except TimeoutError:
+            aborted = "timeout"
+            break
+        if slot_now > slot + 1:
+            continue
+        payloads = []
+        for tx in batch:
+            signer = signers[tx.payer]
+            raw, signature = sign_transaction(tx, signer, rpc.get_latest_blockhash())
+            tx.signature = signature
+            tx.signed = True
+            payloads.append(raw)
+        try:
+            sender.send_payloads(payloads, destination=batch[0].tpu_quic)
+            for tx in batch:
+                tx.submitted = True
+                tx.sent = True
+            sent += len(batch)
+        except Exception as exc:
+            logger.error("TPU send failed, not retrying: %s", exc)
+            for tx in batch:
+                tx.sent = False
+        del payloads
+    if hasattr(plan, "ephemeral_signers"):
+        del plan.ephemeral_signers
+    del signers, keypair
+    exit_code = 0 if aborted is None and sent else (3 if aborted == "spend_cap" else 1)
     summary = _summary(
         plan,
         config,
         aborted=aborted,
         exit_code=exit_code,
-        signed_count=result.signed_count,
-        sent_count=result.sent_count,
-        spent_lamports=result.spent_lamports,
-        extra=extra,
+        signed_count=sum(1 for tx in plan.txs if tx.signed),
+        sent_count=sent,
+        spent_lamports=ledger.spent_lamports,
     )
-    write_plan_files(plan, config, summary)
-    print(format_summary(summary))
+    write_plan_files(plan, config, summary, run_dir, ledger=ledger, genesis=genesis)
     return exit_code
 
 

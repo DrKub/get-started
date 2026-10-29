@@ -2,21 +2,16 @@
 
 from __future__ import annotations
 
-import base64
-
 from solders.compute_budget import set_compute_unit_limit, set_compute_unit_price
 from solders.hash import Hash
-from solders.instruction import AccountMeta, Instruction
 from solders.keypair import Keypair
 from solders.message import Message
 from solders.pubkey import Pubkey
+from solders.system_program import TransferParams, transfer
 from solders.transaction import Transaction
 
-from measure.constants import DRY_RUN_PAYER, MEMO_PROGRAM_ID, PACKET_DATA_SIZE
-from measure.memo import render_memo
+from measure.constants import DRY_RUN_PAYER, PACKET_DATA_SIZE
 from measure.models import PlannedTx
-
-_MEMO_PROGRAM = Pubkey.from_string(MEMO_PROGRAM_ID)
 
 
 def dry_run_payer() -> Pubkey:
@@ -46,28 +41,17 @@ def load_keypair(path) -> Keypair:
     return Keypair.from_bytes(raw)
 
 
-def memo_text(tx: PlannedTx) -> str:
-    return render_memo(
-        experiment_id=tx.experiment_id,
-        seq=tx.seq,
-        arm=tx.arm,
-        send_index=tx.send_index,
-        path=tx.path,
-        priority_fee_lamports=tx.priority_fee_lamports,
-        cu_price_micro_lamports=tx.cu_price_micro_lamports,
-        cu_limit=tx.cu_limit,
-    )
-
-
-def build_instructions(tx: PlannedTx, payer: Pubkey) -> list[Instruction]:
-    memo = memo_text(tx).encode("ascii")
+def build_instructions(tx: PlannedTx, payer: Pubkey) -> list:
+    recipient = Pubkey.from_string(tx.recipient)
     return [
         set_compute_unit_limit(tx.cu_limit),
         set_compute_unit_price(tx.cu_price_micro_lamports),
-        Instruction(
-            _MEMO_PROGRAM,
-            memo,
-            [AccountMeta(payer, True, True)],
+        transfer(
+            TransferParams(
+                from_pubkey=payer,
+                to_pubkey=recipient,
+                lamports=tx.transfer_lamports,
+            )
         ),
     ]
 
@@ -84,27 +68,24 @@ def message_bytes(tx: PlannedTx, payer: Pubkey, blockhash: str) -> bytes:
 def attach_unsigned_messages(
     txs: list[PlannedTx],
     *,
-    payer: Pubkey,
     blockhash: str,
     payer_source: str,
 ) -> None:
-    """Fill memo and unsigned message bytes. Does not sign."""
-    payer_text = str(payer)
+    """Record the message that would be signed. Does not mark the tx submitted."""
     for tx in txs:
-        tx.payer = payer_text
         tx.payer_source = payer_source
         tx.recent_blockhash = blockhash
-        tx.memo = memo_text(tx)
-        tx.unsigned_message_base64 = base64.b64encode(
-            message_bytes(tx, payer, blockhash)
-        ).decode("ascii")
+        tx.unsigned_message_base64 = ""
         tx.signed = False
         tx.sent = False
+        tx.submitted = False
 
 
 def sign_transaction(tx: PlannedTx, keypair: Keypair, blockhash: str) -> tuple[bytes, str]:
     """Sign one planned transaction. Live path only."""
     payer = keypair.pubkey()
+    if str(payer) != tx.payer:
+        raise RuntimeError("signer does not match the planned fee payer")
     raw_tx = Transaction.new_signed_with_payer(
         build_instructions(tx, payer),
         payer,

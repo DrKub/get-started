@@ -10,32 +10,64 @@ from measure.schedule import iter_windows
 from measure.versions import family_for
 
 
-def _assign_paths(
-    windows: list[LeaderWindow],
-    *,
-    tpu_repeats: int,
-    rpc_repeats: int,
-) -> list[tuple[LeaderWindow, str, int]]:
-    """Earliest windows, preserving a TPU-vs-RPC contrast when slots are scarce."""
-    wanted = ["tpu"] * tpu_repeats + ["rpc"] * rpc_repeats
-    if len(windows) >= len(wanted):
-        chosen = wanted
-    else:
-        chosen = []
-        if windows and tpu_repeats:
-            chosen.append("tpu")
-        if len(windows) >= 2 and rpc_repeats:
-            chosen.append("rpc")
-        while len(chosen) < len(windows) and chosen.count("tpu") < tpu_repeats:
-            chosen.append("tpu")
-        while len(chosen) < len(windows) and chosen.count("rpc") < rpc_repeats:
-            chosen.append("rpc")
-        chosen = chosen[: len(windows)]
+def _assign_window(windows: list[LeaderWindow]) -> list[tuple[LeaderWindow, str, int]]:
+    """One direct-TPU window. There is no second submit path."""
     ordered = sorted(windows, key=lambda item: item.start_slot)
-    return [
-        (window, path, repeat_index)
-        for repeat_index, (window, path) in enumerate(zip(ordered, chosen))
-    ]
+    if not ordered:
+        return []
+    return [(ordered[0], "tpu", 0)]
+
+
+def _stake_lamports(node: dict) -> int:
+    raw = node.get("activeStakeLamports")
+    if isinstance(raw, int) and not isinstance(raw, bool):
+        return max(raw, 0)
+    activated = node.get("activatedStake")
+    if isinstance(activated, int) and not isinstance(activated, bool):
+        return max(activated, 0)
+    return 0
+
+
+def ensure_stake_diversity(
+    picked: list[dict],
+    pool: list[dict],
+    *,
+    min_families: int,
+) -> tuple[list[dict], str | None]:
+    """Keep one identity outside the ten largest stake accounts when one is scheduled."""
+    ranked = sorted(pool, key=lambda item: (-item["stake_lamports"], item["identity"]))
+    top_ids = {item["identity"] for item in ranked[:10]}
+    if any(item["identity"] not in top_ids for item in picked):
+        return picked, None
+    seen: set[str] = set()
+    outsiders = []
+    for item in ranked:
+        if item["identity"] in top_ids or item["identity"] in seen:
+            continue
+        seen.add(item["identity"])
+        outsiders.append(item)
+    if not outsiders:
+        return picked, "no scheduled identity outside the ten largest by stake"
+    picked_ids = {item["identity"] for item in picked}
+    for outsider in outsiders:
+        if outsider["identity"] in picked_ids:
+            continue
+        for index in range(len(picked) - 1, -1, -1):
+            trial = picked[:index] + [outsider] + picked[index + 1 :]
+            identities = [item["identity"] for item in trial]
+            if len(identities) != len(set(identities)):
+                continue
+            families = {item["client_family"] for item in trial}
+            if len(families) >= min_families:
+                note = (
+                    f"replaced {picked[index]['identity']} with {outsider['identity']} "
+                    "so the set is not only the ten largest by stake"
+                )
+                return trial, note
+    return picked, (
+        "could not add an identity outside the ten largest by stake "
+        "without dropping below the family minimum"
+    )
 
 
 def build_targets(
@@ -44,8 +76,6 @@ def build_targets(
     min_lead_slots: int,
     target_validators: int,
     min_client_families: int,
-    tpu_repeats: int,
-    rpc_repeats: int,
     tail_is_complete: bool,
 ) -> tuple[list[Target], dict[str, int], list[str], bool, str | None]:
     excluded: Counter[str] = Counter()
@@ -92,6 +122,9 @@ def build_targets(
         if not isinstance(tpu_quic, str) or ":" not in tpu_quic:
             excluded["missing_tpu_quic"] += 1
             continue
+        if node.get("delinquent") is True:
+            excluded["delinquent"] += 1
+            continue
         eligible = [
             item
             for item in identity_windows
@@ -113,6 +146,12 @@ def build_targets(
                 "tpu_quic": tpu_quic,
                 "gossip": node.get("gossip") if isinstance(node.get("gossip"), str) else None,
                 "windows": sorted(eligible, key=lambda item: item.start_slot),
+                "stake_lamports": _stake_lamports(node),
+                "vote_account": node.get("voteAccount") if isinstance(node.get("voteAccount"), str) else None,
+                "jito": node.get("jito") if isinstance(node.get("jito"), bool) else None,
+                "classification_source": node.get("classificationSource")
+                if isinstance(node.get("classificationSource"), str)
+                else "rpc",
             }
         )
 
@@ -146,14 +185,20 @@ def build_targets(
             break
 
     notes: list[str] = []
+    pool = [item for family in grouped.values() for item in family]
+    picked, stake_note = ensure_stake_diversity(picked, pool, min_families=min_client_families)
+    if stake_note:
+        notes.append(stake_note)
+    top_ids = {
+        item["identity"]
+        for item in sorted(pool, key=lambda row: (-row["stake_lamports"], row["identity"]))[:10]
+    }
     targets: list[Target] = []
-    requested = ["tpu"] * tpu_repeats + ["rpc"] * rpc_repeats
     for candidate in picked:
-        assigned_rows = _assign_paths(
-            candidate["windows"],
-            tpu_repeats=tpu_repeats,
-            rpc_repeats=rpc_repeats,
-        )
+        assigned_rows = _assign_window(candidate["windows"])
+        if not assigned_rows:
+            notes.append(f"no window left for {candidate['identity']}")
+            continue
         assigned = [
             AssignedWindow(
                 start_slot=window.start_slot,
@@ -164,13 +209,6 @@ def build_targets(
             )
             for window, path, repeat_index in assigned_rows
         ]
-        got = [item.path for item in assigned]
-        if got != requested[: len(got)] or len(got) != len(requested):
-            notes.append(
-                f"shortfall: {candidate['identity']} ({candidate['client_family']} "
-                f"{candidate['version']}) wanted {requested}, assigned {got} "
-                f"from {len(candidate['windows'])} eligible windows"
-            )
         targets.append(
             Target(
                 identity=candidate["identity"],
@@ -182,6 +220,11 @@ def build_targets(
                 gossip=candidate["gossip"],
                 windows_available=len(candidate["windows"]),
                 assigned=assigned,
+                vote_account=candidate["vote_account"],
+                active_stake_lamports=candidate["stake_lamports"],
+                jito=candidate["jito"],
+                classification_source=candidate["classification_source"],
+                outside_top10_stake=candidate["identity"] not in top_ids,
             )
         )
 

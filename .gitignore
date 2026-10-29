@@ -7,6 +7,8 @@ id.json
 *-keypair.json
 data/raw/*
 !data/raw/.gitkeep
+data/runs/
+data/spend.json
 __pycache__/
 .pytest_cache/
 .venv/

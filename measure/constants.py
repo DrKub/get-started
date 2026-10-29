@@ -6,11 +6,14 @@ Changing an arm changes the default-plan cost locked by ``measure/tests``.
 
 from __future__ import annotations
 
-# Alpenglow activated at the start of epoch 1064.
-# Source: https://solana.com/upgrades/alpenglow (updated October 2026).
+# Alpenglow consensus starts at slot 459,653,000 (epoch 1064, 21 Oct 2026).
+# The first 5,000 slots of the epoch were still Tower BFT. The slot is the cutoff.
+# Source: https://solana.com/upgrades/alpenglow
 ALPENGLOW_ACTIVATION_EPOCH = 1064
 ALPENGLOW_ACTIVATION_UTC = "2026-10-21T13:36:00Z"
 ALPENGLOW_SOURCE = "https://solana.com/upgrades/alpenglow"
+ALPENGLOW_CUTOFF_SLOT = 459_653_000
+ALPENGLOW_GENESIS_CERT_SLOT = 459_652_999
 
 LAMPORTS_PER_SOL = 1_000_000_000
 # The bounty requires the whole live run to fit in about 0.05 SOL.
@@ -30,38 +33,58 @@ DEFAULT_LOOKAHEAD_SLOTS = 16_000
 DEFAULT_MIN_LEAD_SLOTS = 16
 DEFAULT_TARGET_VALIDATORS = 6
 DEFAULT_MIN_CLIENT_FAMILIES = 3
-DEFAULT_TPU_REPEATS = 2
-DEFAULT_RPC_REPEATS = 1
 DEFAULT_LEADER_PAGE = 4_000
 MAX_BLOCKS_TO_FETCH = 500
+# Design budget for fees plus rent principal left in probe accounts.
+# The hard cap stays 0.05 SOL. This is the figure the default plan must beat.
+DESIGN_BUDGET_LAMPORTS = 12_000_000
 
-# Placeholder fee payer for unsigned dry-run messages. The secret was
-# discarded at generation time; do not send SOL to this address.
+# Frozen after a devnet simulateTransaction on 2026-10-29 (slot 516359079).
+# A 1-lamport system transfer plus compute-budget instructions consumed 450 CU.
+# Devnet is not a measurement and does not appear in report tables.
+# 1000 divides 1_000_000, so the priority-fee steps below are exact.
+CU_LIMIT = 1_000
+CU_LIMIT_PROBE = {
+    "excluded_from_report": True,
+    "network": "devnet",
+    "probed_at": "2026-10-29",
+    "slot": 516359079,
+    "units_consumed": 450,
+}
+# getBlock must ask for version 1. Mainnet blocks contain SIMD-0385 v1
+# transactions; maxSupportedTransactionVersion 0 rejects the whole block.
+# Our probes stay legacy + ComputeBudget. The ladder's variable is the
+# priority fee in lamports, which both formats spell.
+MAX_SUPPORTED_TRANSACTION_VERSION = 1
+TRANSACTION_FORMAT = "legacy+compute-budget"
+
+# Same values for every leader in a run. Changing them is a new run.
+# Warm the QUIC connection this many slots before the target slot, and
+# submit the burst when the clock reaches target_slot - BURST_OFFSET_SLOTS
+# (the end of the previous leader's last slot).
+QUIC_WARMUP_SLOTS = 2
+BURST_OFFSET_SLOTS = 1
+RETRIES_INSIDE_WINDOW = False
+
+# Default six rungs, low fee first. Unique integer priority scores.
+# Shorten the non-conflict ladder before the conflict ladder if the cap
+# cannot hold both. Do not drop below six identities or three families.
+LADDER_PRIORITY_FEES = (0, 1, 2, 4, 8, 16)
+CONFLICT_SLOT_OFFSET = 0
+NONCONFLICT_SLOT_OFFSET = 2
+TRANSFER_LAMPORTS = 1
+# Rent-exempt minimum for a 0-byte account on mainnet after the 2026
+# rent cut. Live runs replace this with getMinimumBalanceForRentExemption.
+DEFAULT_RENT_LAMPORTS = 650_240
+
+# Agave cost-model terms used only to check that integer priority scores
+# are unique. Signature 720, write lock 300, plus the requested CU limit.
+SIGNATURE_COST = 720
+WRITE_LOCK_COST = 300
+
+# Placeholder listed in older notes. Dry-run now generates an ephemeral
+# key when KEYPAIR_PATH is unset. Do not fund this address.
 DRY_RUN_PAYER = "8E15T21wGpaMNdcReLFFrBHXCoZdaMJpNV89n1wYrp1u"
-
-# Ladder: identical CU limit so compute-unit price and total priority fee
-# rank the same way. Sent low-fee first, so send order is the reverse of
-# both priority hypotheses.
-LADDER_CU_LIMIT = 20_000
-LADDER_PRIORITY_FEES = (0, 1_000, 5_000, 20_000, 50_000, 200_000)
-
-# Equal priority, sent in seq order, to read the tie-break.
-ARRIVAL_COUNT = 4
-ARRIVAL_CU_LIMIT = 20_000
-ARRIVAL_PRIORITY_FEE = 10_000
-
-# Same-window contrast of "price per CU" against "total priority fee".
-# metric-price: higher CU price, lower total fee.
-# metric-total: lower CU price, higher total fee.
-METRIC_PRICE_CU_LIMIT = 20_000
-METRIC_PRICE_FEE = 40_000
-METRIC_TOTAL_CU_LIMIT = 80_000
-METRIC_TOTAL_FEE = 80_000
-
-# Slot offsets inside a 4-slot rotation. Short windows collapse to offset 0.
-LADDER_SLOT_OFFSET = 0
-ARRIVAL_SLOT_OFFSET = 2
-METRIC_SLOT_OFFSET = 3
 
 MEMO_PROGRAM_ID = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
 MEMO_PROGRAM_V1 = "Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo"
@@ -89,19 +112,20 @@ CLIENT_ID_FAMILY = {
     "Raiku": "raiku",
 }
 
-# Round-robin order. Schedulers most likely to differ come first so a
-# six-validator set is not six copies of the heaviest stake pool.
+# Round-robin order. Frankendancer support ended at the Alpenglow
+# handoff; if one is still scheduled it is its own family and is not
+# preferred over a current client.
 FAMILY_PRIORITY = (
     "firedancer",
-    "frankendancer",
-    "harmonic-firedancer",
     "jito-solana",
     "agave",
+    "harmonic-firedancer",
     "harmonic-agave",
     "agave-bam",
     "firebam",
     "rakurai",
     "raiku",
+    "frankendancer",
 )
 
 HYPOTHESES = (

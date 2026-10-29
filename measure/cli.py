@@ -9,6 +9,8 @@ from pathlib import Path
 
 from measure.config import make_config
 from measure.errors import ConfigError, MeasureError
+from measure.fees import lamports_to_sol_str
+from measure.keyinfo import describe_keypair
 from measure.pipeline import collect_from_sent, parse_block_file, run_measure
 
 
@@ -26,7 +28,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     run = sub.add_parser("run", help="select leaders and plan (default) or send (--live)")
     _add_output(run)
-    run.add_argument("--live", action="store_true", help="sign and send; dry-run otherwise")
+    run.add_argument(
+        "--live",
+        action="store_true",
+        help="submit transactions. Same switch as MODE=live. Dry-run otherwise.",
+    )
     run.add_argument("--collect", action="store_true", help="after a live send, fetch getBlock")
     run.add_argument("--fixture-dir", default=None, help="offline snapshot directory, no RPC")
     run.add_argument("--keypair", default=None, help="Solana CLI keypair JSON; overrides KEYPAIR_PATH")
@@ -34,9 +40,11 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--lookahead", type=int, default=None)
     run.add_argument("--min-lead-slots", type=int, default=None)
     run.add_argument("--target-validators", type=int, default=None)
-    run.add_argument("--tpu-repeats", type=int, default=None)
-    run.add_argument("--rpc-repeats", type=int, default=None)
     run.add_argument("--experiment-id", default=None)
+
+    key = sub.add_parser("key", help="print a keypair's public key and balance; do not send")
+    key.add_argument("--keypair", default=None)
+    key.add_argument("--rpc-url", default=None)
 
     collect = sub.add_parser("collect", help="fetch getBlock for a previous live send")
     _add_output(collect)
@@ -73,6 +81,8 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _dispatch(args: argparse.Namespace) -> int:
+    if args.command == "key":
+        return _key(args)
     if args.command == "parse-block":
         return parse_block_file(args.file, args.slot, args.output_dir)
     if args.command == "collect":
@@ -85,8 +95,6 @@ def _dispatch(args: argparse.Namespace) -> int:
         lookahead_slots=args.lookahead,
         min_lead_slots=args.min_lead_slots,
         target_validators=args.target_validators,
-        tpu_repeats=args.tpu_repeats,
-        rpc_repeats=args.rpc_repeats,
         output_dir=args.output_dir,
         keypair_path=args.keypair,
         experiment_id=args.experiment_id,
@@ -95,3 +103,17 @@ def _dispatch(args: argparse.Namespace) -> int:
         collect=bool(args.collect),
     )
     return run_measure(config)
+
+
+def _key(args: argparse.Namespace) -> int:
+    import os
+
+    path = args.keypair or os.environ.get("KEYPAIR_PATH")
+    if not path:
+        raise ConfigError("pass --keypair or set KEYPAIR_PATH")
+    rpc = args.rpc_url or os.environ.get("RPC_URL") or "https://api.mainnet-beta.solana.com"
+    info = describe_keypair(Path(path), rpc)
+    print(f"pubkey: {info['pubkey']}")
+    print(f"balance: {info['sol']} SOL ({info['lamports']} lamports)")
+    print(lamports_to_sol_str(info["lamports"]))
+    return 0

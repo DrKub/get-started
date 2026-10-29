@@ -1,8 +1,8 @@
 """CLI and environment configuration.
 
-``--live`` is the only switch that sends. Environment variables can point at
-an RPC URL, a keypair file, and a lower spend cap. They cannot enable sending
-and they cannot raise the cap above 0.05 SOL.
+Sending requires an explicit switch: ``--live`` or ``MODE=live``. They are the
+same gate. Any other ``MODE`` value, including an empty one, stays on dry-run.
+The spend cap cannot be raised above 0.05 SOL.
 """
 
 from __future__ import annotations
@@ -17,10 +17,8 @@ from measure.constants import (
     DEFAULT_LOOKAHEAD_SLOTS,
     DEFAULT_MIN_CLIENT_FAMILIES,
     DEFAULT_MIN_LEAD_SLOTS,
-    DEFAULT_RPC_REPEATS,
     DEFAULT_RPC_URL,
     DEFAULT_TARGET_VALIDATORS,
-    DEFAULT_TPU_REPEATS,
 )
 from measure.errors import ConfigError
 from measure.fees import lamports_to_sol_str, resolve_spend_cap
@@ -51,16 +49,18 @@ class Config:
     min_lead_slots: int
     target_validators: int
     min_client_families: int
-    tpu_repeats: int
-    rpc_repeats: int
     leader_page: int
-    output_dir: Path
+    data_dir: Path
+    output_dir: Path | None
     keypair_path: Path | None
     live: bool
+    mode: str
+    mode_warning: str | None
     experiment_id: str | None
     fixture_dir: Path | None
     collect: bool
     timeout_s: float
+    validators_app_token: str | None
 
     @property
     def spend_cap_sol(self) -> str:
@@ -85,14 +85,33 @@ def config_from_env() -> dict:
             "MIN_CLIENT_FAMILIES",
             _env("MIN_CLIENT_FAMILIES") or str(DEFAULT_MIN_CLIENT_FAMILIES),
         ),
-        "tpu_repeats": _positive_int("TPU_REPEATS", _env("TPU_REPEATS") or str(DEFAULT_TPU_REPEATS)),
-        "rpc_repeats": _positive_int("RPC_REPEATS", _env("RPC_REPEATS") or str(DEFAULT_RPC_REPEATS)),
         "leader_page": _positive_int("LEADER_PAGE", _env("LEADER_PAGE") or str(DEFAULT_LEADER_PAGE)),
-        "output_dir": Path(_env("OUTPUT_DIR") or "data/raw"),
+        "data_dir": Path(_env("DATA_DIR") or "data"),
+        "output_dir": Path(_env("OUTPUT_DIR")) if _env("OUTPUT_DIR") else None,
         "keypair_path": Path(_env("KEYPAIR_PATH")) if _env("KEYPAIR_PATH") else None,
         "experiment_id": _env("EXPERIMENT_ID"),
         "timeout_s": float(_env("RPC_TIMEOUT_S") or "60"),
+        "validators_app_token": _env("VALIDATORS_APP_TOKEN"),
+        "mode": (_env("MODE") or "").lower(),
     }
+
+
+def resolve_mode(explicit_live: bool, mode: str) -> tuple[bool, str, str | None]:
+    """Map ``MODE`` and ``--live`` onto one switch.
+
+    ``MODE=live`` and ``--live`` both enable sending. An absent or
+    unrecognised ``MODE`` stays on dry-run unless ``--live`` was passed.
+    """
+    warning = None
+    recognized = mode in ("", "dry-run", "dry_run", "dryrun", "live")
+    if mode and not recognized:
+        warning = f"MODE={mode!r} is not recognised; staying on dry-run"
+    live = explicit_live or mode == "live"
+    if warning and explicit_live:
+        live = True
+        warning = f"MODE={mode!r} is not recognised; --live still enables sending"
+    label = "live" if live else "dry-run"
+    return live, label, warning
 
 
 def make_config(
@@ -103,9 +122,8 @@ def make_config(
     min_lead_slots: int | None = None,
     target_validators: int | None = None,
     min_client_families: int | None = None,
-    tpu_repeats: int | None = None,
-    rpc_repeats: int | None = None,
     leader_page: int | None = None,
+    data_dir: str | None = None,
     output_dir: str | None = None,
     keypair_path: str | None = None,
     experiment_id: str | None = None,
@@ -116,6 +134,7 @@ def make_config(
 ) -> Config:
     env = config_from_env()
     cap = resolve_spend_cap(spend_cap_sol or env["spend_cap_sol"])
+    enabled, mode_label, mode_warning = resolve_mode(live, env["mode"])
     config = Config(
         rpc_url=rpc_url or env["rpc_url"],
         spend_cap_lamports=cap,
@@ -125,16 +144,18 @@ def make_config(
         min_client_families=(
             env["min_client_families"] if min_client_families is None else min_client_families
         ),
-        tpu_repeats=env["tpu_repeats"] if tpu_repeats is None else tpu_repeats,
-        rpc_repeats=env["rpc_repeats"] if rpc_repeats is None else rpc_repeats,
         leader_page=env["leader_page"] if leader_page is None else leader_page,
+        data_dir=Path(data_dir) if data_dir else env["data_dir"],
         output_dir=Path(output_dir) if output_dir else env["output_dir"],
         keypair_path=Path(keypair_path) if keypair_path else env["keypair_path"],
-        live=live,
+        live=enabled,
+        mode=mode_label,
+        mode_warning=mode_warning,
         experiment_id=experiment_id or env["experiment_id"],
         fixture_dir=Path(fixture_dir) if fixture_dir else None,
         collect=collect,
         timeout_s=timeout_s if timeout_s is not None else env["timeout_s"],
+        validators_app_token=env["validators_app_token"],
     )
     _validate(config)
     return config
@@ -147,10 +168,6 @@ def _validate(config: Config) -> None:
         raise ConfigError("TARGET_VALIDATORS must be at least 6")
     if config.min_client_families < 3:
         raise ConfigError("MIN_CLIENT_FAMILIES must be at least 3")
-    if config.tpu_repeats < 1:
-        raise ConfigError("TPU_REPEATS must be at least 1")
-    if config.rpc_repeats < 1:
-        raise ConfigError("RPC_REPEATS must be at least 1")
     if config.lookahead_slots < 4:
         raise ConfigError("LOOKAHEAD_SLOTS must be at least 4")
     if config.min_lead_slots < 1:

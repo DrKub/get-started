@@ -1,9 +1,12 @@
-"""Selection diversity and the pre-registered ordering hypotheses."""
+"""Selection and the two ladders."""
 
 from __future__ import annotations
 
+from measure.budget import projected_outlay_lamports
+from measure.constants import DESIGN_BUDGET_LAMPORTS, LADDER_PRIORITY_FEES
 from measure.offline_snapshot import IDENTITIES, build_offline_snapshot
 from measure.plan import build_experiment
+from measure.select import ensure_stake_diversity
 
 
 def _plan():
@@ -13,100 +16,87 @@ def _plan():
         min_lead_slots=16,
         target_validators=6,
         min_client_families=3,
-        tpu_repeats=2,
-        rpc_repeats=1,
         tail_is_complete=True,
+        cap_remaining_lamports=50_000_000,
+        main_payer="8E15T21wGpaMNdcReLFFrBHXCoZdaMJpNV89n1wYrp1u",
     )
 
 
-def test_selects_six_forks_and_does_not_merge_colliding_versions():
+def test_selects_six_current_families_and_skips_frankendancer():
     plan = _plan()
     assert plan.selection_ok
     assert plan.regime == "after"
     families = [target.client_family for target in plan.targets]
     assert families == [
         "firedancer",
-        "frankendancer",
-        "harmonic-firedancer",
         "jito-solana",
         "agave",
+        "harmonic-firedancer",
         "harmonic-agave",
+        "agave-bam",
     ]
+    assert "frankendancer" not in families
+    assert IDENTITIES["unknown"] not in {target.identity for target in plan.targets}
     versions = {target.client_family: target.version for target in plan.targets}
     assert versions["firedancer"] == versions["harmonic-firedancer"] == "26.10.4"
     assert versions["agave"] == versions["jito-solana"] == "4.3.2"
-    assert versions["firedancer"] == "26.10.4"
-    identities = {target.identity for target in plan.targets}
-    assert IDENTITIES["agave-bam"] not in identities
-    assert IDENTITIES["unknown"] not in identities
-    assert IDENTITIES["no-tpu"] not in identities
-    assert plan.exclusion_counts["missing_client_id"] >= 1
-    assert plan.exclusion_counts["unknown_client_id"] >= 1
-    assert plan.exclusion_counts["missing_tpu_quic"] >= 1
-    assert plan.exclusion_counts["leader_not_in_cluster_nodes"] >= 1
-    assert plan.total_fee_lamports == 6 * 3 * 496_000
-    assert plan.total_fee_lamports < 50_000_000
+    assert plan.projected_outlay_lamports == projected_outlay_lamports(n_leaders=6)
+    assert plan.projected_outlay_lamports < DESIGN_BUDGET_LAMPORTS
+    assert all(len(target.assigned) == 1 and target.assigned[0].path == "tpu" for target in plan.targets)
 
 
-def test_ladder_inverts_send_order_and_metric_arms_disagree():
+def test_ladders_are_low_fee_first_and_do_not_share_nonconflict_accounts():
     plan = _plan()
-    first = next(target for target in plan.targets if target.client_family == "firedancer")
-    even = [tx for tx in plan.txs if tx.identity == first.identity and tx.repeat_index == 0]
-    odd = [tx for tx in plan.txs if tx.identity == first.identity and tx.repeat_index == 1]
-    ladder = [tx for tx in even if tx.arm == "ladder"]
-    assert [tx.priority_fee_lamports for tx in ladder] == sorted(
-        tx.priority_fee_lamports for tx in ladder
-    )
-    assert ladder[0].rank_send_order < ladder[-1].rank_send_order
-    assert ladder[0].rank_cu_price > ladder[-1].rank_cu_price
-    assert ladder[0].fee_lamports == 5_000
-    assert all(tx.slot_offset == 0 for tx in ladder)
-    arrival = [tx for tx in even if tx.arm == "arrival"]
-    assert len({tx.cu_price_micro_lamports for tx in arrival}) == 1
-    assert [tx.rank_arm_cu_price for tx in arrival] == sorted(tx.rank_arm_cu_price for tx in arrival)
-    assert all(tx.slot_offset == 2 for tx in arrival)
-
-    def pair(rows):
-        return (
-            next(tx for tx in rows if tx.arm == "metric-price"),
-            next(tx for tx in rows if tx.arm == "metric-total"),
-        )
-
-    even_price, even_total = pair(even)
-    odd_price, odd_total = pair(odd)
-    assert even_price.rank_cu_price < even_total.rank_cu_price
-    assert even_total.rank_priority_fee < even_price.rank_priority_fee
-    assert even_price.rank_send_order < even_total.rank_send_order
-    assert odd_price.rank_cu_price < odd_total.rank_cu_price
-    assert odd_total.rank_priority_fee < odd_price.rank_priority_fee
-    assert odd_total.rank_send_order < odd_price.rank_send_order
-    assert {tx.path for tx in even} == {"tpu"}
-    rpc_rows = [tx for tx in plan.txs if tx.identity == first.identity and tx.repeat_index == 2]
-    assert {tx.path for tx in rpc_rows} == {"rpc"}
-
-
-def test_two_families_are_not_enough():
-    snapshot = build_offline_snapshot()
-    keep = {
-        IDENTITIES["firedancer"],
-        IDENTITIES["jito-solana"],
-        IDENTITIES["filler"],
-    }
-    snapshot.leaders = [item for item in snapshot.leaders if item in keep]
-    snapshot.nodes = [
-        node
-        for node in snapshot.nodes
-        if node["pubkey"] in {IDENTITIES["firedancer"], IDENTITIES["jito-solana"]}
+    conflict = [tx for tx in plan.txs if tx.ladder == "conflict" and tx.identity == plan.targets[0].identity]
+    nonconflict = [
+        tx for tx in plan.txs if tx.ladder == "nonconflict" and tx.identity == plan.targets[0].identity
     ]
+    assert [tx.priority_fee_lamports for tx in conflict] == list(LADDER_PRIORITY_FEES)
+    assert [tx.send_index for tx in conflict] == list(range(6))
+    assert len({tx.payer for tx in conflict}) == 1
+    assert len({tx.recipient for tx in conflict}) == 1
+    assert len({tx.payer for tx in nonconflict}) == 6
+    assert len({tx.recipient for tx in nonconflict}) == 6
+    assert {tx.payer for tx in nonconflict}.isdisjoint({tx.payer for tx in conflict})
+    assert conflict[0].planned_slot != nonconflict[0].planned_slot
+    assert all(tx.cu_limit == 1000 for tx in conflict + nonconflict)
+    assert all(tx.transfer_lamports == 1 for tx in conflict + nonconflict)
+    assert not any(tx.memo for tx in plan.txs)
+    scores = [tx.priority_score for tx in conflict]
+    assert scores == sorted(scores)
+    assert len(set(scores)) == 6
+
+
+def test_nonconflict_shortens_before_the_conflict_ladder():
     plan = build_experiment(
-        snapshot,
+        build_offline_snapshot(),
         experiment_id="e1071-test",
         min_lead_slots=16,
         target_validators=6,
         min_client_families=3,
-        tpu_repeats=2,
-        rpc_repeats=1,
         tail_is_complete=True,
+        cap_remaining_lamports=250_000,
+        main_payer="8E15T21wGpaMNdcReLFFrBHXCoZdaMJpNV89n1wYrp1u",
     )
-    assert plan.selection_ok is False
-    assert plan.selection_reason
+    assert plan.conflict_rungs == LADDER_PRIORITY_FEES
+    assert len(plan.nonconflict_rungs) < 6
+    assert len(plan.targets) == 6
+
+
+def test_stake_swap_keeps_three_families():
+    def candidate(identity, family, stake):
+        return {
+            "identity": identity,
+            "client_family": family,
+            "stake_lamports": stake,
+            "version": "1",
+        }
+
+    picked = [candidate(f"big{i}", f"fam{i}", 1_000_000 - i) for i in range(6)]
+    extras = [candidate(f"also{i}", "fam0", 500_000 - i) for i in range(4)]
+    outsider = candidate("small", "fam0", 10)
+    pool = picked + extras + [outsider]
+    updated, note = ensure_stake_diversity(picked, pool, min_families=3)
+    assert any(item["identity"] == "small" for item in updated)
+    assert note and "small" in note
+    assert len({item["client_family"] for item in updated}) >= 3

@@ -2,11 +2,10 @@
 
 The runtime charges::
 
-    signature_fee + (cu_limit * cu_price_micro_lamports) // 1_000_000
+    signature_fee + ceil(cu_limit * cu_price_micro_lamports / 1_000_000)
 
-Estimates use that exact division, so the cap tracks what a landed
-transaction debits. A transaction that never lands still counts once we
-attempt to send it: the cap is an upper bound, not a refund ledger.
+Agave's ``get_prioritization_fee`` uses that ceiling. The ladder steps are
+chosen so the division is exact and the ceiling does not add an extra lamport.
 """
 
 from __future__ import annotations
@@ -70,7 +69,29 @@ def cu_price_for_priority_fee(cu_limit: int, priority_fee_lamports: int) -> int:
 def charged_priority_fee(cu_limit: int, cu_price_micro_lamports: int) -> int:
     if cu_limit < 0 or cu_price_micro_lamports < 0:
         raise ValueError("cu limit and price must be non-negative")
-    return (cu_limit * cu_price_micro_lamports) // MICROLAMPORTS_PER_LAMPORT
+    micro = cu_limit * cu_price_micro_lamports
+    if micro == 0:
+        return 0
+    return (micro + MICROLAMPORTS_PER_LAMPORT - 1) // MICROLAMPORTS_PER_LAMPORT
+
+
+def leader_reward_lamports(priority_fee_lamports: int, *, signatures: int = 1) -> int:
+    """Leader deposit: half the base fee, plus the whole priority fee."""
+    base = signatures * SIGNATURE_FEE_LAMPORTS
+    return base // 2 + priority_fee_lamports
+
+
+def transaction_cost_units(cu_limit: int, *, signatures: int = 1, writable_accounts: int = 2) -> int:
+    from measure.constants import SIGNATURE_COST, WRITE_LOCK_COST
+
+    return signatures * SIGNATURE_COST + writable_accounts * WRITE_LOCK_COST + cu_limit
+
+
+def priority_score(cu_limit: int, priority_fee_lamports: int) -> int:
+    """Agave ``P = (reward * 1_000_000) / (cost + 1)`` for a fixed message shape."""
+    reward = leader_reward_lamports(priority_fee_lamports)
+    cost = transaction_cost_units(cu_limit)
+    return (reward * MICROLAMPORTS_PER_LAMPORT) // (cost + 1)
 
 
 def transaction_fee_lamports(
