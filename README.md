@@ -8,6 +8,8 @@ The primary evidence is transactions this project sent into each leader's window
 
 **Results:** [REPORT.md](REPORT.md). It covers three live runs, 6 validators across 6 client labels and 3 client families, 30 ladders, 168 of our own probe transactions, and 0.0087 SOL. Run 5 shuffled the conflict ladder. Agave, JitoLabs, AgaveBam, and Firedancer were strictly fee-ordered on that shuffle, so for those four clients fee priority is separated from send order. Every claim links to signatures and slots in [analysis/output/EVIDENCE.md](analysis/output/EVIDENCE.md).
 
+**Submission requirements → where:** [docs/SUBMISSION_CHECKLIST.md](docs/SUBMISSION_CHECKLIST.md).
+
 ## Layout
 
 | Path | Contents |
@@ -154,6 +156,19 @@ Tau is computed on our signatures, so a foreign transaction between two probes d
 Runs 3 and 4 sent every ladder lowest fee first, and all rungs of a burst share one millisecond send timestamp. Fee rank and send rank are the same ranking on those 24 ladders. Arrival at the leader is not observed. "Ordered by fee" (tau −1) and "ordered by arrival" (tau +1) are distinguishable only by direction, and a last-in-first-out drain predicts the same block as a fee sort.
 
 Run 5 (`SEND_ORDER=shuffled`, `LADDERS=conflict`) broke that collinearity. Each ladder is a seeded permutation with |tau(fee, send)| ≤ 1/3, so a fee sort, FIFO, and LIFO predict three different block orders. The analysis tests arrival against the recorded send order. Agave, JitoLabs, AgaveBam, and Firedancer each landed at tau(fee) = −1 with |tau(send)| ≤ 1/3: strict priority, independent of send order, one slot each. The non-conflict ladder was not shuffled, and both Harmonic clients stayed off `strict_priority`. HarmonicFiredancer's shuffled slot was reversed (tau +0.867) and is reported as a one-slot anomaly, not a rule. Details are in [REPORT.md](REPORT.md#fee-order-and-send-order). `--send-order descending` has not been run.
+
+## How this handles the required considerations
+
+The listing's "things you'll need to consider" are the six items in [METHODOLOGY §10](docs/METHODOLOGY.md#10-required-considerations). That section is the long form, including what each item deliberately does not do.
+
+| Consideration | How this design handles it | Where |
+| --- | --- | --- |
+| Leader schedule and leader types | `getSlotLeaders` names who may order the slot. `clientId` names which published scheduler is the prior. Selection is round-robin across labels, with one identity outside the ten largest by stake when one is scheduled. The block's `Fee` reward confirms the producer afterwards. Stake is recorded as a covariate. | [Leader schedule and selection](#leader-schedule-and-selection). [METHODOLOGY §3](docs/METHODOLOGY.md#3-leader-schedule) and [§8](docs/METHODOLOGY.md#8-validator-selection). |
+| Path from the backend to the executing node | Each probe is one QUIC stream to that leader's `tpuQuic`. The connection opens 12 slots ahead and the burst goes out one slot before the target. Endpoint, send index, send time, and handshake RTT are recorded. There is no RPC on the probe path, and leader receive time is unobserved. | [Probes](#probes). [METHODOLOGY §9.4](docs/METHODOLOGY.md#94-burst-timing) and [§10](docs/METHODOLOGY.md#path-from-the-backend-to-the-executing-node). |
+| Interaction of our own transactions | The conflict ladder is a self-transfer from the funder on every rung, so the rungs share one write lock and the scheduler must serialize them. The non-conflict ladder gives each rung its own payer, funded before the burst, so no two rungs share a writable account. The two ladders target different slots. The raw block's lock set is checked for every ladder. | [Probes](#probes). [METHODOLOGY §9.1](docs/METHODOLOGY.md#91-conflict-ladder-primary) and [§9.2](docs/METHODOLOGY.md#92-non-conflict-ladder). |
+| Competition inside the block | Tau uses our signatures only, so a foreign transaction between rungs does not change pairwise order. The gap is still recorded. A foreign transaction that writes an account the ladder locks sets `contaminated`. A rung that never lands lowers `n`; below 5 the call is `inconclusive`. | [Competition inside the block](#competition-inside-the-block). `analysis/output/ladder_statistics.csv`, `block_positions.csv`. |
+| Send order | `send_index` is recorded on every probe. Ascending, used in runs 3 and 4, makes fee rank and send rank the same order, separable only by the sign of tau. Shuffled, used in run 5, keeps \|tau(fee, send)\| ≤ 1/3, so a fee sort, FIFO, and LIFO predict different block orders. The `arrival` call is tested against send order. | [Fee order and send order](#fee-order-and-send-order). [METHODOLOGY §9.3](docs/METHODOLOGY.md#93-send-order). |
+| Noise versus a rule | Calls are pre-registered: `inconclusive` below 5 landed rungs, `strict_priority` at tau = −1, `priority` and `arrival` at the §9.3 thresholds, otherwise `no_rule_detected`. The p-value is an exact one-sided permutation test. Pooled shares resample whole ladders. Slots that disagree become `mixed_across_slots`. The thresholds were not refit after the runs. | [Statistic and decision rule](#statistic-and-decision-rule). [METHODOLOGY §9.3](docs/METHODOLOGY.md#93-send-order). `analysis/output/ladder_statistics.csv`. |
 
 ## What this does not separate
 
