@@ -1,111 +1,88 @@
 # Submission checklist
 
-Maps the Superteam listing [Inside the Block](https://earn.superteam.fun/listing/inside-the-block-how-solana-validators-order-transactions) onto this repository. "Docs" means this branch can satisfy the item. "Pipeline" means the item is only true once `measure/`, `docker-compose.yml`, and `data/` implement the contract in [README.md](../README.md) and [METHODOLOGY.md](METHODOLOGY.md). Those paths are owned by the measurement work and are out of scope for the documentation patch.
-
-<!-- TODO: sync with measure/ -->
+This maps the Superteam listing [Inside the Block](https://earn.superteam.fun/listing/inside-the-block-how-solana-validators-order-transactions) onto this repository, as of the integration branch. "Met" means a reviewer can check the item from a file or a command named in the row. "Partly" means the row says what is missing.
 
 ## Submission requirements
 
 | Requirement | Where it is satisfied | Status |
 | --- | --- | --- |
-| Repository link, any language | This repo. Design in `README.md` and `docs/`. Sender in `measure/` when that work lands. | Docs: yes. Pipeline: pending. |
-| One-command reproduce. Docker Compose expected. | `docker compose up --build` is defined as dry-run. | Pipeline. Contract in the README quickstart. |
-| Keys only via volume or env, never in the repo | `KEYPAIR_PATH` mounted read-only at `/keys/id.json`. `RPC_URL` and `VALIDATORS_APP_TOKEN` are env only. | Pipeline must enforce ignore rules and the mount. Docs forbid committing them. |
-| Dry-run by default. Live send only behind an explicit flag, with a spend cap. | `MODE` defaults to `dry-run`. Live requires `MODE=live`. Cap defaults to 0.05 SOL and the process must reject a higher cap. | Pipeline implements the check. Docs specify it, including the durable ledger under `data/`. |
-| All raw data, signatures and slots, so judges can call `getBlock` | `data/runs/<UTC>/attempts.jsonl` and `blocks/<slot>.json`. Report tables quote the same fields. | Pipeline writes the files. [REPORT_TEMPLATE.md](REPORT_TEMPLATE.md) is the judge-facing index. |
-| README: why this design, how each consideration is handled, what it does not separate | [README.md](../README.md) sections "Why this design", "How the design handles the required considerations", "What this does not separate". Long form in [METHODOLOGY.md](METHODOLOGY.md). | Docs. |
-| Report with the date of every measurement, and a "What went wrong" section | [REPORT_TEMPLATE.md](REPORT_TEMPLATE.md) measurement log and "What went wrong". Dates are UTC dates of the sends. | Template is docs. Filled report waits on a live run. Do not submit the template with blank tables as if it were results. |
+| Repository link, any language | This repo, Python 3.12. The sender is in `measure/`, the analysis in `analysis/`, the figures in `viz/`. | Met |
+| One-command reproduction with Docker Compose | `docker compose up --build` is a mainnet dry-run. `docker compose --profile report run --rm report` rebuilds `analysis/output/` and `figures/` from committed data with `network_mode: none`. Without Docker, use `python -m analysis && python -m viz`. CI runs both and checks that `git diff` is empty. | Met |
+| Keys only through a volume or env, never in the repo | `KEYPAIR_PATH` is mounted read-only at `/keys/id.json`. `RPC_URL` and `VALIDATORS_APP_TOKEN` come only from env. Probe keys go to `data/keys/` (0600, gitignored). [.gitignore](../.gitignore) covers `.env*`, `keys/`, `data/keys/`, `id.json`, and `*keypair*.json`. `.dockerignore` keeps `.env` and `data/` out of images. CI scans every commit for key material. | Met |
+| Dry-run by default; live only behind an explicit switch, with a spend cap | `MODE` defaults to `dry-run`. Only `MODE=live` or `--live` sends. Dry-run output goes to `data/dry-runs/`. `SPEND_CAP_SOL` defaults to 0.05 and rejects anything higher. Fees are reserved in `data/spend.json` before signing. See [compose_dry_run.log](#evidence-produced-during-review). | Met |
+| All raw data with signatures and slots | `data/runs/<run>/`: `attempts.jsonl` (every signature), `block_observations.*` (slot and index), `blocks/<slot>.json.gz` (`getBlock` bodies), manifest, and logs. [EVIDENCE.md](../analysis/output/EVIDENCE.md) links all 132 probe signatures to Solscan and Explorer. | Met. The raw blocks were backfilled read-only after the runs; see the report. |
+| README: why this design, each consideration, what it does not separate | [README.md](../README.md): "Design", "The main limit", "What this does not separate". The long form is [METHODOLOGY.md](METHODOLOGY.md) sections 3–11. | Met |
+| Report with a date on every measurement and a "What went wrong" section | [REPORT.md](../REPORT.md): the measurement log has UTC times on 29 October 2026, and "What went wrong" separates design limits from pipeline failures. | Met |
 
 ## Scope constraints
 
-| Constraint | How the design meets it |
-| --- | --- |
-| Mainnet only for measurements | Report header fixes the network. Devnet and localnet are pipeline tests and are excluded from report tables. Methodology §2. |
-| At least six validators | Selection procedure, methodology §8. The report keeps a row for every selected identity, including those never measured, so a shortfall is visible. |
-| At least three client or fork versions | Stratify on validators.app `software_client` and `software_version`, or on the manifest's family labels when the API token is absent. Snapshot both at selection time. |
-| About 0.05 SOL, enforced in code | `SPEND_CAP_SOL` default and hard maximum 0.05. Count base fee, priority fee, funding transfers, and retries before signing. Methodology §9.5. |
-| Jito validators in scope. Bundles and tips out of scope. | No `sendBundle`, no tip accounts. Jito identities are a stratum. Ordinary probes only. Methodology §5. |
-| Primary evidence is our own transactions | Tau and the calls use our signatures. Foreign transactions are covariates and a contamination flag. |
-| Alpenglow: do not mix before and after 21 October 2026 | Slot cutoff ≥ 459,653,000. Pre-cutoff blocks cannot enter the report. Methodology §2. |
+| Constraint | How it is met | Evidence |
+| --- | --- | --- |
+| Mainnet only | Both runs are mainnet; devnet was used only for the CU probe, which is marked `excluded_from_report`. | `manifest.json` `regime: after`, `genesis_certificate.matches_expected: true` |
+| At least six validators | 6 identities, each with a conflict ladder and a non-conflict ladder, in each of 2 runs. | REPORT "Per-validator results" |
+| At least three clients | 6 `clientId` labels (Agave, JitoLabs, AgaveBam, HarmonicAgave, Firedancer, HarmonicFiredancer) in 3 families (Agave, Jito, Firedancer). Labels come from RPC `clientId`, not validators.app. | `validators.json`, REPORT study header |
+| About 0.05 SOL, enforced in code | Hard cap 0.05 SOL on fees, reserved before signing. Total spent was 8,563,552 lamports (0.0086 SOL), including 7,802,952 lamports of unswept run-3 rent. | REPORT "Cost", with account and sweep links |
+| Jito validators in scope; bundles and tips out of scope | JitoLabs and AgaveBam leaders were measured with ordinary TPU transactions. There is no `sendBundle` and no tip transfer in the code. | `manifest.json` `jito_bundles: out_of_scope` |
+| Primary evidence is our own transactions | Tau, calls, and pooled shares use only our 132 probe signatures. Foreign transactions are used only for the contamination count (0 in all 24). | `ladder_statistics.csv` |
+| Every measurement after Alpenglow (slot ≥ 459,653,000) | All measured slots are between 462,834,368 and 462,842,242. The planner rejects earlier slots. | `evidence_transactions.csv`; `ALPENGLOW_CUTOFF_SLOT` in `measure/constants.py` |
 
 ## Judging criteria
 
 ### Design validity, 35%
 
-The experiment measures ledger order of our probes inside a known leader's block, against two pre-declared alternative orders (fee, and the reversed send order).
-
-| Consideration the listing names | Where it is handled |
-| --- | --- |
-| Leader schedule and leader types | README "Leader schedule and leader types". Methodology §3 and §8. |
-| Path from backend to the executing node, and everything in between | README "Path from this process to the executing leader". Methodology §4.6 and the path section of §10. |
-| Interaction of our own transactions | Conflict ladder versus non-conflict ladder. README and methodology §9 and §10. |
-| Competition inside the block | Pairwise tau on our signatures, gaps, contamination flag, two rollups. Methodology §10. |
-| Send order | Low-fee-first burst. Sign of tau-b. Methodology §9.3. |
-| Noise versus rule | Pre-registered calls, permutation p-value, `no_rule_detected` as a real outcome. Methodology §9.3 and §12. |
-
-The "What this does not separate" sections (README and methodology §11) are part of validity. A design that claimed to isolate pack's `schedule_strategy`, or the priority floor, would be measuring something this path cannot see.
+| Consideration | Where it is handled | Honest status |
+| --- | --- | --- |
+| Leader schedule and leader types | `getSlotLeaders`, `clientId` labels, round-robin selection, and the producing leader confirmed from each block's `Fee` reward (24/24 match). Methodology sections 3 and 8. | Met |
+| Path to the executing node | Direct QUIC to `tpuQuic`, with no RPC on the probe path. Endpoint, RTT, and copies are recorded. Methodology section 10. | Met. There is one vantage point. |
+| Interaction of our own transactions | Conflict ladder (funder self-transfers, one shared lock) versus non-conflict ladder (one payer per rung). The lock sets are verified from raw blocks. | Met |
+| Competition inside the block | Tau on our signatures only, gaps, and a foreign-writer count against each ladder's lock set. | Met (0 contaminated) |
+| Send order | Both runs sent the lowest fee first, so fee order and send order are collinear (`tau_fee_send` = +1 in 24/24). | **Partly.** Fee priority and a LIFO drain are not separated in the data. `--send-order shuffled` is implemented and tested offline but has not been run. See METHODOLOGY section 9.3.1. |
+| Noise versus a rule | Pre-registered calls, exact permutation p, and a cluster bootstrap. `inconclusive` applies at n < 5, and `mixed_across_slots` across runs. | Met. n is small: one slot per validator per ladder per run, and run 4's non-conflict ladders had four rungs. |
 
 ### Verifiability and reproducibility, 25%
 
-| Judge action | What they use |
+| Judge action | Command or file |
 | --- | --- |
-| Re-run the plan without spending | `docker compose up --build` |
-| Re-run live, capped | `MODE=live` with `SPEND_CAP_SOL=0.05` and a mounted key |
-| Check a claimed index | Signature and slot in the report, then `getBlock`, compared with `data/runs/.../blocks/<slot>.json` |
-| Recompute a call | Per-slot table: `n`, tau-b, `priority_pairwise`, `send_pairwise`, `p_perm`. Rule in methodology §9.3. |
-| See when it happened | Measurement log with a UTC date on every row |
-
-<!-- TODO: sync with measure/ -->
-
-Reproducibility of the numerical result is limited by mainnet: the same leader's next window is a different block. Reproducibility of the **procedure** is the requirement. The raw bodies make the **claim about a past slot** checkable without trusting our index.
+| Rebuild every number and figure offline | `python -m analysis && python -m viz`, then `git diff --exit-code analysis/output figures` |
+| The same, in a container with no network | `docker compose --profile report run --rm report` |
+| Re-run the plan without spending | `docker compose up --build` (mainnet read-only), or the offline fixture command in the README |
+| Check a claimed block index | REPORT per-slot row, then the `EVIDENCE.md` anchor, then the Solscan or Explorer link, compared with `data/runs/<run>/blocks/<slot>.json.gz` |
+| Recompute a call | `ladder_statistics.csv` (`n`, tau-b, pair shares, exact p), using the rule in METHODOLOGY section 9.3 |
+| Check the cost | REPORT "Cost": `meta.fee` sums, sweep signatures, and stranded-account links |
+| Run all tests | `pytest measure/tests analysis/tests viz/tests` (also in CI) |
 
 ### Analysis quality, 25%
 
-| Expectation | Where it lives |
+| Expectation | Where |
 | --- | --- |
-| Honesty about noise | Thresholds fixed in the methodology before the live sample. Report shows the statistics next to the label. |
-| Null results allowed | Report section "Null results" gives the sentence to use, including what a null does not prove. |
-| Limits stated | README and methodology §11. Report section "What this does not separate" asks which of those limits this run actually hit. |
-| No mixed Alpenglow eras | Slot cutoff in the study header. |
-| Dates on every measurement | Measurement log. |
-| What went wrong | Its own section, with prompts that have to be answered from the log. |
+| Honesty about noise | Statistics sit next to every label. The thresholds were fixed beforehand. Pooled shares carry bootstrap CIs. |
+| Null results | Run 4's six non-conflict ladders are `inconclusive`, and several ladders are `no_rule_detected`. HarmonicFiredancer's conflict ladder is `mixed_across_slots`, not "fee ordered". |
+| Limits stated | REPORT "Send order and fee order are collinear", "What this does not separate", and "What went wrong". METHODOLOGY section 11. |
+| No mixed Alpenglow eras | All slots are at least 462,834,368. |
+| Dates on every measurement | REPORT measurement log |
 
 ### Engineering, 15%
 
-| Expectation | Owner |
+| Expectation | Where |
 | --- | --- |
-| Dry-run default | Pipeline, specified in the README. `docker compose up` must not submit. |
-| Spend cap in code | Pipeline. Cap checked before each signature, persisted across restarts, hard maximum 0.05 SOL. |
-| Logging | `run.log` plus `attempts.jsonl`. No secrets in either. |
-| Containerization | Compose service `measure`, key via volume, config via env. |
+| Dry-run default | Compose `MODE: ${MODE:-dry-run}`. CI asserts it from `docker compose config`. |
+| Spend cap in code | `measure/ledger.py`: reserve before signing, global and durable, reconciled to `meta.fee`. |
+| Tests | `measure/tests`, `analysis/tests`, `viz/tests`. CI runs them on every push. |
+| CI | [.github/workflows/ci.yml](../.github/workflows/ci.yml): tests, offline reproduction with a diff check, an offline shuffled dry-run, key-material scans over history, and the Compose report service. |
+| Logging | `run.log`, `live-stderr.log`, and `attempts.jsonl`. RPC keys are stripped. |
+| Containerization | `measure` (host network, read-only key mount, non-root) and `report` (no network). |
 
-<!-- TODO: sync with measure/ -->
+## Known gaps, ranked by judging impact
 
-This documentation patch does not claim the engineering points. It is the specification those points are reviewed against.
+1. **Collinearity of fee and send order** (design). Fixable with one `SEND_ORDER=shuffled LADDERS=conflict` run (about 0.00018 SOL). The proposal is in REPORT "Proposed next run".
+2. **Small n** (analysis). Each ladder has one slot per run, and the four-rung non-conflict ladders cannot pass the rule.
+3. **Raw blocks backfilled, not archived at run time** (verifiability). The bodies are a later read-only `getBlock`. They agree with the live positions exactly.
+4. **Runs 3 and 4 are not exact replicates** (analysis). They differ in TPU copies (2 vs 1), conflict lock count (2 vs 1), and non-conflict length (6 vs 4).
+5. **One vantage point; labels without validators.app** (design).
 
-## Definition of done for a submission
+## Evidence produced during review
 
-1. `docker compose up --build` completes a mainnet dry-run: real schedule, transactions built, nothing sent, projected spend printed.
-2. A live run with `MODE=live` has signed no more than 0.05 SOL, and the ledger file shows the total.
-3. At least six identities and three client or fork versions are either measured or explicitly listed as missed in "What went wrong."
-4. Every reported slot is ≥ 459,653,000, and the measurement log dates fall after the 21 October 2026 handoff.
-5. `data/` contains signatures, slots, and raw `getBlock` bodies for every reported landing.
-6. The report is a filled copy of the template, not the template.
-7. No key material is in git history.
-
-## TODO sync points
-
-Search the repo for `TODO: sync with measure/`. As of this patch they sit on:
-
-| Location | Assumption the pipeline must match or edit |
-| --- | --- |
-| README quickstart | Command is `docker compose up --build`. Dry-run needs no extra flag. |
-| README live example | `MODE=live`, `SPEND_CAP_SOL=0.05`, `KEYPAIR_PATH` as a host path, `RPC_URL`. |
-| README environment table | Those names, plus optional `VALIDATORS_APP_TOKEN`. In-container key path `/keys/id.json`, read-only. |
-| README compose shape | Service `measure`, build `./measure`, data volume `./data:/data`. |
-| README "What you should see" | Dry-run prints identities, versions, slots, ladder, projected spend. Live adds signature, slot, block index. |
-| README raw data pointer | Run artifacts under `data/`. |
-| Methodology §9.5 | Durable spend total under `data/`, survives restart, not reset by a new run directory. |
-| Methodology §9.6 | `data/runs/<UTC>/` layout: `manifest.json`, `validators.json`, `spend.json`, `attempts.jsonl`, `blocks/<slot>.json`, `run.log`. |
-| Report template, per-slot signatures | Same `blocks/<slot>.json` path. |
-| This checklist | Compose command, cap ledger, and log paths above. |
+- A Compose dry-run against mainnet (read-only) signed 64 transactions and sent 0.
+- An offline shuffled dry-run sent nothing, and its plan recorded `send_order: shuffled` with |tau(fee, send)| ≤ 1/3 per ladder.
+- The offline report container reproduced `analysis/output/` and `figures/` byte-for-byte.
+- A read-only on-chain check confirmed the 12 run-3 accounts hold 7,802,952 lamports and the 4 run-4 payers hold 0.
