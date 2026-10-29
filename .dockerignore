@@ -1,0 +1,10 @@
+.git
+.env
+.env.*
+data
+figures
+analysis/output
+**/__pycache__
+**/.pytest_cache
+keys
+secrets

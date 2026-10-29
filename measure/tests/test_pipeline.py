@@ -78,6 +78,15 @@ def test_mode_live_is_the_same_switch_as_the_flag(monkeypatch, tmp_path):
     assert make_config(data_dir=str(tmp_path), live=True).live is True
 
 
+def test_dry_run_plans_stay_out_of_committed_runs(tmp_path):
+    from measure.pipeline import _run_dir
+
+    dry = _run_dir(make_config(data_dir=str(tmp_path)))
+    live = _run_dir(make_config(data_dir=str(tmp_path), live=True))
+    assert dry.parent == tmp_path / "dry-runs"
+    assert live.parent == tmp_path / "runs"
+
+
 def test_signed_probe_fits_the_tpu_window():
     plan = build_experiment(
         build_offline_snapshot(),

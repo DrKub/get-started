@@ -101,6 +101,7 @@ def config_from_env() -> dict:
         "mode": (_env("MODE") or "").lower(),
         "ws_url": _env("WS_URL"),
         "tpu_copies": _positive_int("TPU_COPIES", _env("TPU_COPIES") or "1"),
+        "collect": (_env("COLLECT") or "").lower() in ("1", "true", "yes"),
         "send_order": (_env("SEND_ORDER") or DEFAULT_SEND_ORDER).lower(),
         "send_order_seed": (
             _positive_int("SEND_ORDER_SEED", _env("SEND_ORDER_SEED"))
@@ -170,7 +171,7 @@ def make_config(
         mode_warning=mode_warning,
         experiment_id=experiment_id or env["experiment_id"],
         fixture_dir=Path(fixture_dir) if fixture_dir else None,
-        collect=collect,
+        collect=collect or env["collect"],
         timeout_s=timeout_s if timeout_s is not None else env["timeout_s"],
         validators_app_token=env["validators_app_token"],
         ws_url=env["ws_url"],

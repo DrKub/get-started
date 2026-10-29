@@ -11,6 +11,7 @@ data/raw/*
 !data/raw/.gitkeep
 # data/runs/ is committed: it is the raw evidence (signatures, slots, block indexes).
 data/spend.json
+data/dry-runs/
 __pycache__/
 .pytest_cache/
 .venv/

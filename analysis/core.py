@@ -657,15 +657,24 @@ def _write_csv(path: Path, rows: list[dict], fields: Iterable[str] | None = None
             )
 
 
+def live_run_dirs(data_root: Path) -> list[Path]:
+    """Collected live runs only; a dry-run plan has no block observations."""
+    return sorted(
+        path
+        for path in data_root.iterdir()
+        if (path / "manifest.json").exists()
+        and (path / "block_observations.jsonl").exists()
+        and json.loads((path / "manifest.json").read_text()).get("mode") == "live"
+    )
+
+
 def write_outputs(
     data_root: Path, output_dir: Path, *, seed: int = 20261029, replicates: int = 10_000
 ) -> dict:
     statistics: list[dict] = []
     evidence: list[dict] = []
     positions: list[dict] = []
-    run_dirs = sorted(
-        path for path in data_root.iterdir() if (path / "manifest.json").exists()
-    )
+    run_dirs = live_run_dirs(data_root)
     if not run_dirs:
         raise ValueError(f"no runs found under {data_root}")
     for run_dir in run_dirs:

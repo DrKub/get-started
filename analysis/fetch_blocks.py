@@ -25,7 +25,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from .core import read_jsonl
+from .core import live_run_dirs, read_jsonl
 
 PROBE_LADDERS = ("conflict", "nonconflict")
 
@@ -95,8 +95,7 @@ def main() -> None:
     )
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
-    runs = sorted(path for path in args.data.iterdir() if (path / "manifest.json").exists())
-    for run_dir in runs:
+    for run_dir in live_run_dirs(args.data):
         out = run_dir / "blocks"
         out.mkdir(exist_ok=True)
         for slot in probe_slots(run_dir):

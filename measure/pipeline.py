@@ -223,10 +223,12 @@ def _run_dir(config: Config) -> Path:
         config.output_dir.mkdir(parents=True, exist_ok=True)
         return config.output_dir
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    path = config.data_dir / "runs" / stamp
+    # Live runs are the committed evidence; dry-run plans stay out of data/runs.
+    parent = config.data_dir / ("runs" if config.live else "dry-runs")
+    path = parent / stamp
     suffix = 2
     while path.exists():
-        path = config.data_dir / "runs" / f"{stamp}-{suffix}"
+        path = parent / f"{stamp}-{suffix}"
         suffix += 1
     path.mkdir(parents=True)
     return path
