@@ -3,11 +3,13 @@
 !.env.example
 secrets/
 keys/
+data/keys/
 id.json
 *-keypair.json
+*keypair*.json
 data/raw/*
 !data/raw/.gitkeep
-data/runs/
+# data/runs/ is committed: it is the raw evidence (signatures, slots, block indexes).
 data/spend.json
 __pycache__/
 .pytest_cache/
