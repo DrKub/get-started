@@ -1,0 +1,14 @@
+{
+  "cap_lamports": 3500000,
+  "counted_against_cap": false,
+  "funding_principal_lamports": 2600984,
+  "halt_reason": null,
+  "ledger_path": "/workspace/itb/data/spend.json",
+  "ledger_spent_before_lamports": 760600,
+  "net_lamports": 340228,
+  "peak_lamports": 2941212,
+  "planned_fee_lamports": 340228,
+  "projected_outlay_lamports": 2941212,
+  "signed_lamports": 340228,
+  "temporary_rent_lamports": 2600984
+}

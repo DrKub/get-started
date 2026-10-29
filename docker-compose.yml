@@ -1,0 +1,52 @@
+# `docker compose up` is a dry-run: it plans and signs in memory and submits nothing.
+# MODE=live is the same switch as `run --live`. Host networking keeps mainnet RPC
+# and leader QUIC off the bridge NAT.
+#
+# `docker compose run --rm report` rebuilds analysis/output/ and figures/ from the
+# committed data/runs/ with no network.
+services:
+  measure:
+    build:
+      context: ./measure
+    image: solana-validator-order-measure:local
+    init: true
+    network_mode: host
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment:
+      MODE: ${MODE:-dry-run}
+      RPC_URL: ${RPC_URL:-https://api.mainnet-beta.solana.com}
+      WS_URL: ${WS_URL:-}
+      SPEND_CAP_SOL: ${SPEND_CAP_SOL:-0.05}
+      RUN_SPEND_CAP_SOL: ${RUN_SPEND_CAP_SOL:-}
+      VALIDATORS_APP_TOKEN: ${VALIDATORS_APP_TOKEN:-}
+      DATA_DIR: /data
+      KEYPAIR_PATH: /keys/id.json
+      LOOKAHEAD_SLOTS: ${LOOKAHEAD_SLOTS:-16000}
+      MIN_LEAD_SLOTS: ${MIN_LEAD_SLOTS:-150}
+      TARGET_VALIDATORS: ${TARGET_VALIDATORS:-6}
+      MIN_CLIENT_FAMILIES: ${MIN_CLIENT_FAMILIES:-3}
+      TPU_COPIES: ${TPU_COPIES:-1}
+      SEND_ORDER: ${SEND_ORDER:-ascending}
+      SEND_ORDER_SEED: ${SEND_ORDER_SEED:-}
+      LADDERS: ${LADDERS:-both}
+      # Only read on a live run: fetch getBlock for the landed slots afterwards.
+      COLLECT: ${COLLECT:-1}
+    volumes:
+      - ./data:/data
+      - ${KEYPAIR_PATH:-/dev/null}:/keys/id.json:ro
+    command: ["run"]
+
+  report:
+    profiles: ["report"]
+    build:
+      context: .
+      dockerfile: Dockerfile.report
+    image: solana-validator-order-report:local
+    network_mode: none
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    working_dir: /work
+    environment:
+      MPLCONFIGDIR: /tmp/matplotlib
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - .:/work

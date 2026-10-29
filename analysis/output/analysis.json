@@ -1,0 +1,1580 @@
+{
+  "inputs": [
+    "20261029T094113Z",
+    "20261029T100356Z",
+    "20261029T110321Z"
+  ],
+  "method": {
+    "p_value": "exact one-sided permutation enumeration in observed direction",
+    "bootstrap": "percentile CI resampling validator-run ladders",
+    "bootstrap_seed": 20261029,
+    "bootstrap_replicates": 10000
+  },
+  "ladder_statistics": [
+    {
+      "run": "20261029T094113Z",
+      "identity": "7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE",
+      "client": "Agave",
+      "version": "4.3.2",
+      "ladder": "conflict",
+      "slot": 462834648,
+      "n": 6,
+      "tau_b": -1.0,
+      "exact_p_value": 0.001388888888888889,
+      "priority_pairs": 15,
+      "arrival_pairs": 0,
+      "pairs": 15,
+      "priority_pair_share": 1.0,
+      "arrival_pair_share": 0.0,
+      "call": "strict_priority",
+      "send_order": "ascending",
+      "tau_fee_send": 1.0,
+      "tau_send_b": -1.0,
+      "target_slot": 462834648,
+      "slot_minus_target": 0,
+      "block_leader": "7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "87oictqa3Ckckg6udEkJY8iK4P68XRSXEfmAnC3sA1Za",
+        "DK9sHVjV47u2trp7tVpAeCsgdaTcGyBh8WjZLUmCCRpM"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T094113Z",
+      "identity": "7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE",
+      "client": "Agave",
+      "version": "4.3.2",
+      "ladder": "nonconflict",
+      "slot": 462834650,
+      "n": 6,
+      "tau_b": 1.0,
+      "exact_p_value": 0.001388888888888889,
+      "priority_pairs": 0,
+      "arrival_pairs": 15,
+      "pairs": 15,
+      "priority_pair_share": 0.0,
+      "arrival_pair_share": 1.0,
+      "call": "arrival",
+      "send_order": "ascending",
+      "tau_fee_send": 1.0,
+      "tau_send_b": 1.0,
+      "target_slot": 462834650,
+      "slot_minus_target": 0,
+      "block_leader": "7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "29fwv79DV8bce7EYk3e8xVbw6hGseMtGN8h1fXb77vEo",
+        "2PVDH9s8VmdUTTUUy4h8G2qpRB8SXaHiEgDoXJXxYyEw",
+        "5TaUP7mZjWFJP4tJUAxQTMbnhMLqjf7w8bXvsbNUFkZi",
+        "5z57ak6mpRhdv2XGYAh5K3Hs27sABEx14zZsragwodk5",
+        "6M4cvoXjN2CpyPKeT3Qw5zoBwxCjtB3dcW7eckzo6ZWX",
+        "6NcbwrkQB9ja8saWd3a7pADVsWaxs2ccz2BjraA2W9H4",
+        "87oictqa3Ckckg6udEkJY8iK4P68XRSXEfmAnC3sA1Za",
+        "9qA7wv2CgunGs1i6yE4TZbAvTwBKyjE7TVfnBGXFbH5z",
+        "ACto4VygQ4XnjHzATtXPBTaA2sc4qoSTfY6dRNSscNAm",
+        "DTSCGe1NPjDWz9n6bNuSSBPvu1y8H61ywpGehWBwgct9",
+        "E4997L7cz1SScaVehMjdou7gCUDNW925LYcjRDzkAZ78",
+        "GKffzzkByNhYHioYGatQbrNcPd4rmA7jHx2xtbGwuSD2"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T094113Z",
+      "identity": "9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY",
+      "client": "Firedancer",
+      "version": "26.10.4",
+      "ladder": "conflict",
+      "slot": 462835056,
+      "n": 6,
+      "tau_b": -1.0,
+      "exact_p_value": 0.001388888888888889,
+      "priority_pairs": 15,
+      "arrival_pairs": 0,
+      "pairs": 15,
+      "priority_pair_share": 1.0,
+      "arrival_pair_share": 0.0,
+      "call": "strict_priority",
+      "send_order": "ascending",
+      "tau_fee_send": 1.0,
+      "tau_send_b": -1.0,
+      "target_slot": 462835056,
+      "slot_minus_target": 0,
+      "block_leader": "9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "87oictqa3Ckckg6udEkJY8iK4P68XRSXEfmAnC3sA1Za",
+        "DK9sHVjV47u2trp7tVpAeCsgdaTcGyBh8WjZLUmCCRpM"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T094113Z",
+      "identity": "9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY",
+      "client": "Firedancer",
+      "version": "26.10.4",
+      "ladder": "nonconflict",
+      "slot": 462835057,
+      "n": 6,
+      "tau_b": -1.0,
+      "exact_p_value": 0.001388888888888889,
+      "priority_pairs": 15,
+      "arrival_pairs": 0,
+      "pairs": 15,
+      "priority_pair_share": 1.0,
+      "arrival_pair_share": 0.0,
+      "call": "strict_priority",
+      "send_order": "ascending",
+      "tau_fee_send": 1.0,
+      "tau_send_b": -1.0,
+      "target_slot": 462835058,
+      "slot_minus_target": -1,
+      "block_leader": "9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "29fwv79DV8bce7EYk3e8xVbw6hGseMtGN8h1fXb77vEo",
+        "2PVDH9s8VmdUTTUUy4h8G2qpRB8SXaHiEgDoXJXxYyEw",
+        "5TaUP7mZjWFJP4tJUAxQTMbnhMLqjf7w8bXvsbNUFkZi",
+        "5z57ak6mpRhdv2XGYAh5K3Hs27sABEx14zZsragwodk5",
+        "6M4cvoXjN2CpyPKeT3Qw5zoBwxCjtB3dcW7eckzo6ZWX",
+        "6NcbwrkQB9ja8saWd3a7pADVsWaxs2ccz2BjraA2W9H4",
+        "87oictqa3Ckckg6udEkJY8iK4P68XRSXEfmAnC3sA1Za",
+        "9qA7wv2CgunGs1i6yE4TZbAvTwBKyjE7TVfnBGXFbH5z",
+        "ACto4VygQ4XnjHzATtXPBTaA2sc4qoSTfY6dRNSscNAm",
+        "DTSCGe1NPjDWz9n6bNuSSBPvu1y8H61ywpGehWBwgct9",
+        "E4997L7cz1SScaVehMjdou7gCUDNW925LYcjRDzkAZ78",
+        "GKffzzkByNhYHioYGatQbrNcPd4rmA7jHx2xtbGwuSD2"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T094113Z",
+      "identity": "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy",
+      "client": "AgaveBam",
+      "version": "4.4.0-rc.1",
+      "ladder": "conflict",
+      "slot": 462834376,
+      "n": 6,
+      "tau_b": -1.0,
+      "exact_p_value": 0.001388888888888889,
+      "priority_pairs": 15,
+      "arrival_pairs": 0,
+      "pairs": 15,
+      "priority_pair_share": 1.0,
+      "arrival_pair_share": 0.0,
+      "call": "strict_priority",
+      "send_order": "ascending",
+      "tau_fee_send": 1.0,
+      "tau_send_b": -1.0,
+      "target_slot": 462834376,
+      "slot_minus_target": 0,
+      "block_leader": "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "87oictqa3Ckckg6udEkJY8iK4P68XRSXEfmAnC3sA1Za",
+        "DK9sHVjV47u2trp7tVpAeCsgdaTcGyBh8WjZLUmCCRpM"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T094113Z",
+      "identity": "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy",
+      "client": "AgaveBam",
+      "version": "4.4.0-rc.1",
+      "ladder": "nonconflict",
+      "slot": 462834378,
+      "n": 6,
+      "tau_b": -0.4666666666666667,
+      "exact_p_value": 0.1361111111111111,
+      "priority_pairs": 11,
+      "arrival_pairs": 4,
+      "pairs": 15,
+      "priority_pair_share": 0.7333333333333333,
+      "arrival_pair_share": 0.26666666666666666,
+      "call": "no_rule_detected",
+      "send_order": "ascending",
+      "tau_fee_send": 1.0,
+      "tau_send_b": -0.4666666666666667,
+      "target_slot": 462834378,
+      "slot_minus_target": 0,
+      "block_leader": "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "29fwv79DV8bce7EYk3e8xVbw6hGseMtGN8h1fXb77vEo",
+        "2PVDH9s8VmdUTTUUy4h8G2qpRB8SXaHiEgDoXJXxYyEw",
+        "5TaUP7mZjWFJP4tJUAxQTMbnhMLqjf7w8bXvsbNUFkZi",
+        "5z57ak6mpRhdv2XGYAh5K3Hs27sABEx14zZsragwodk5",
+        "6M4cvoXjN2CpyPKeT3Qw5zoBwxCjtB3dcW7eckzo6ZWX",
+        "6NcbwrkQB9ja8saWd3a7pADVsWaxs2ccz2BjraA2W9H4",
+        "87oictqa3Ckckg6udEkJY8iK4P68XRSXEfmAnC3sA1Za",
+        "9qA7wv2CgunGs1i6yE4TZbAvTwBKyjE7TVfnBGXFbH5z",
+        "ACto4VygQ4XnjHzATtXPBTaA2sc4qoSTfY6dRNSscNAm",
+        "DTSCGe1NPjDWz9n6bNuSSBPvu1y8H61ywpGehWBwgct9",
+        "E4997L7cz1SScaVehMjdou7gCUDNW925LYcjRDzkAZ78",
+        "GKffzzkByNhYHioYGatQbrNcPd4rmA7jHx2xtbGwuSD2"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T094113Z",
+      "identity": "Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk",
+      "client": "HarmonicAgave",
+      "version": "4.3.2",
+      "ladder": "conflict",
+      "slot": 462834368,
+      "n": 6,
+      "tau_b": -0.2,
+      "exact_p_value": 0.3597222222222222,
+      "priority_pairs": 9,
+      "arrival_pairs": 6,
+      "pairs": 15,
+      "priority_pair_share": 0.6,
+      "arrival_pair_share": 0.4,
+      "call": "no_rule_detected",
+      "send_order": "ascending",
+      "tau_fee_send": 1.0,
+      "tau_send_b": -0.2,
+      "target_slot": 462834368,
+      "slot_minus_target": 0,
+      "block_leader": "Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "87oictqa3Ckckg6udEkJY8iK4P68XRSXEfmAnC3sA1Za",
+        "DK9sHVjV47u2trp7tVpAeCsgdaTcGyBh8WjZLUmCCRpM"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T094113Z",
+      "identity": "Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk",
+      "client": "HarmonicAgave",
+      "version": "4.3.2",
+      "ladder": "nonconflict",
+      "slot": 462834370,
+      "n": 6,
+      "tau_b": 0.3333333333333333,
+      "exact_p_value": 0.23472222222222222,
+      "priority_pairs": 5,
+      "arrival_pairs": 10,
+      "pairs": 15,
+      "priority_pair_share": 0.3333333333333333,
+      "arrival_pair_share": 0.6666666666666666,
+      "call": "no_rule_detected",
+      "send_order": "ascending",
+      "tau_fee_send": 1.0,
+      "tau_send_b": 0.3333333333333333,
+      "target_slot": 462834370,
+      "slot_minus_target": 0,
+      "block_leader": "Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "29fwv79DV8bce7EYk3e8xVbw6hGseMtGN8h1fXb77vEo",
+        "2PVDH9s8VmdUTTUUy4h8G2qpRB8SXaHiEgDoXJXxYyEw",
+        "5TaUP7mZjWFJP4tJUAxQTMbnhMLqjf7w8bXvsbNUFkZi",
+        "5z57ak6mpRhdv2XGYAh5K3Hs27sABEx14zZsragwodk5",
+        "6M4cvoXjN2CpyPKeT3Qw5zoBwxCjtB3dcW7eckzo6ZWX",
+        "6NcbwrkQB9ja8saWd3a7pADVsWaxs2ccz2BjraA2W9H4",
+        "87oictqa3Ckckg6udEkJY8iK4P68XRSXEfmAnC3sA1Za",
+        "9qA7wv2CgunGs1i6yE4TZbAvTwBKyjE7TVfnBGXFbH5z",
+        "ACto4VygQ4XnjHzATtXPBTaA2sc4qoSTfY6dRNSscNAm",
+        "DTSCGe1NPjDWz9n6bNuSSBPvu1y8H61ywpGehWBwgct9",
+        "E4997L7cz1SScaVehMjdou7gCUDNW925LYcjRDzkAZ78",
+        "GKffzzkByNhYHioYGatQbrNcPd4rmA7jHx2xtbGwuSD2"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T094113Z",
+      "identity": "HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU",
+      "client": "JitoLabs",
+      "version": "4.3.2",
+      "ladder": "conflict",
+      "slot": 462834404,
+      "n": 6,
+      "tau_b": -1.0,
+      "exact_p_value": 0.001388888888888889,
+      "priority_pairs": 15,
+      "arrival_pairs": 0,
+      "pairs": 15,
+      "priority_pair_share": 1.0,
+      "arrival_pair_share": 0.0,
+      "call": "strict_priority",
+      "send_order": "ascending",
+      "tau_fee_send": 1.0,
+      "tau_send_b": -1.0,
+      "target_slot": 462834404,
+      "slot_minus_target": 0,
+      "block_leader": "HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "87oictqa3Ckckg6udEkJY8iK4P68XRSXEfmAnC3sA1Za",
+        "DK9sHVjV47u2trp7tVpAeCsgdaTcGyBh8WjZLUmCCRpM"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T094113Z",
+      "identity": "HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU",
+      "client": "JitoLabs",
+      "version": "4.3.2",
+      "ladder": "nonconflict",
+      "slot": 462834406,
+      "n": 6,
+      "tau_b": 0.3333333333333333,
+      "exact_p_value": 0.23472222222222222,
+      "priority_pairs": 5,
+      "arrival_pairs": 10,
+      "pairs": 15,
+      "priority_pair_share": 0.3333333333333333,
+      "arrival_pair_share": 0.6666666666666666,
+      "call": "no_rule_detected",
+      "send_order": "ascending",
+      "tau_fee_send": 1.0,
+      "tau_send_b": 0.3333333333333333,
+      "target_slot": 462834406,
+      "slot_minus_target": 0,
+      "block_leader": "HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "29fwv79DV8bce7EYk3e8xVbw6hGseMtGN8h1fXb77vEo",
+        "2PVDH9s8VmdUTTUUy4h8G2qpRB8SXaHiEgDoXJXxYyEw",
+        "5TaUP7mZjWFJP4tJUAxQTMbnhMLqjf7w8bXvsbNUFkZi",
+        "5z57ak6mpRhdv2XGYAh5K3Hs27sABEx14zZsragwodk5",
+        "6M4cvoXjN2CpyPKeT3Qw5zoBwxCjtB3dcW7eckzo6ZWX",
+        "6NcbwrkQB9ja8saWd3a7pADVsWaxs2ccz2BjraA2W9H4",
+        "87oictqa3Ckckg6udEkJY8iK4P68XRSXEfmAnC3sA1Za",
+        "9qA7wv2CgunGs1i6yE4TZbAvTwBKyjE7TVfnBGXFbH5z",
+        "ACto4VygQ4XnjHzATtXPBTaA2sc4qoSTfY6dRNSscNAm",
+        "DTSCGe1NPjDWz9n6bNuSSBPvu1y8H61ywpGehWBwgct9",
+        "E4997L7cz1SScaVehMjdou7gCUDNW925LYcjRDzkAZ78",
+        "GKffzzkByNhYHioYGatQbrNcPd4rmA7jHx2xtbGwuSD2"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T094113Z",
+      "identity": "JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b",
+      "client": "HarmonicFiredancer",
+      "version": "26.10.4",
+      "ladder": "conflict",
+      "slot": 462834396,
+      "n": 6,
+      "tau_b": -0.7333333333333333,
+      "exact_p_value": 0.027777777777777776,
+      "priority_pairs": 13,
+      "arrival_pairs": 2,
+      "pairs": 15,
+      "priority_pair_share": 0.8666666666666667,
+      "arrival_pair_share": 0.13333333333333333,
+      "call": "priority",
+      "send_order": "ascending",
+      "tau_fee_send": 1.0,
+      "tau_send_b": -0.7333333333333333,
+      "target_slot": 462834396,
+      "slot_minus_target": 0,
+      "block_leader": "JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "87oictqa3Ckckg6udEkJY8iK4P68XRSXEfmAnC3sA1Za",
+        "DK9sHVjV47u2trp7tVpAeCsgdaTcGyBh8WjZLUmCCRpM"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T094113Z",
+      "identity": "JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b",
+      "client": "HarmonicFiredancer",
+      "version": "26.10.4",
+      "ladder": "nonconflict",
+      "slot": 462834398,
+      "n": 6,
+      "tau_b": 0.3333333333333333,
+      "exact_p_value": 0.23472222222222222,
+      "priority_pairs": 5,
+      "arrival_pairs": 10,
+      "pairs": 15,
+      "priority_pair_share": 0.3333333333333333,
+      "arrival_pair_share": 0.6666666666666666,
+      "call": "no_rule_detected",
+      "send_order": "ascending",
+      "tau_fee_send": 1.0,
+      "tau_send_b": 0.3333333333333333,
+      "target_slot": 462834398,
+      "slot_minus_target": 0,
+      "block_leader": "JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "29fwv79DV8bce7EYk3e8xVbw6hGseMtGN8h1fXb77vEo",
+        "2PVDH9s8VmdUTTUUy4h8G2qpRB8SXaHiEgDoXJXxYyEw",
+        "5TaUP7mZjWFJP4tJUAxQTMbnhMLqjf7w8bXvsbNUFkZi",
+        "5z57ak6mpRhdv2XGYAh5K3Hs27sABEx14zZsragwodk5",
+        "6M4cvoXjN2CpyPKeT3Qw5zoBwxCjtB3dcW7eckzo6ZWX",
+        "6NcbwrkQB9ja8saWd3a7pADVsWaxs2ccz2BjraA2W9H4",
+        "87oictqa3Ckckg6udEkJY8iK4P68XRSXEfmAnC3sA1Za",
+        "9qA7wv2CgunGs1i6yE4TZbAvTwBKyjE7TVfnBGXFbH5z",
+        "ACto4VygQ4XnjHzATtXPBTaA2sc4qoSTfY6dRNSscNAm",
+        "DTSCGe1NPjDWz9n6bNuSSBPvu1y8H61ywpGehWBwgct9",
+        "E4997L7cz1SScaVehMjdou7gCUDNW925LYcjRDzkAZ78",
+        "GKffzzkByNhYHioYGatQbrNcPd4rmA7jHx2xtbGwuSD2"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T100356Z",
+      "identity": "7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE",
+      "client": "Agave",
+      "version": "4.3.2",
+      "ladder": "conflict",
+      "slot": 462842240,
+      "n": 6,
+      "tau_b": -1.0,
+      "exact_p_value": 0.001388888888888889,
+      "priority_pairs": 15,
+      "arrival_pairs": 0,
+      "pairs": 15,
+      "priority_pair_share": 1.0,
+      "arrival_pair_share": 0.0,
+      "call": "strict_priority",
+      "send_order": "ascending",
+      "tau_fee_send": 1.0,
+      "tau_send_b": -1.0,
+      "target_slot": 462842240,
+      "slot_minus_target": 0,
+      "block_leader": "7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "DK9sHVjV47u2trp7tVpAeCsgdaTcGyBh8WjZLUmCCRpM"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T100356Z",
+      "identity": "7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE",
+      "client": "Agave",
+      "version": "4.3.2",
+      "ladder": "nonconflict",
+      "slot": 462842242,
+      "n": 4,
+      "tau_b": 0.6666666666666666,
+      "exact_p_value": 0.16666666666666666,
+      "priority_pairs": 1,
+      "arrival_pairs": 5,
+      "pairs": 6,
+      "priority_pair_share": 0.16666666666666666,
+      "arrival_pair_share": 0.8333333333333334,
+      "call": "inconclusive",
+      "send_order": "ascending",
+      "tau_fee_send": 1.0,
+      "tau_send_b": 0.6666666666666666,
+      "target_slot": 462842242,
+      "slot_minus_target": 0,
+      "block_leader": "7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "3nb8bwDUDvWt5eQbi6rFQnUvqUz6FrtsQe2UD4CiiXPY",
+        "5PMDsXzRfYqt1vhcJNtJEDjeAnu4H1nYHYgf1LRM8kEQ",
+        "8Zn5AC7D9g5io3f4s74a81VcbEYArwkuBEjobkNU1FHx",
+        "DXy4zQkASZvFG1MraMCMCrm4GEbnzeqQVX3Ptno6w1sU"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T100356Z",
+      "identity": "9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY",
+      "client": "Firedancer",
+      "version": "26.10.4",
+      "ladder": "conflict",
+      "slot": 462840780,
+      "n": 6,
+      "tau_b": -1.0,
+      "exact_p_value": 0.001388888888888889,
+      "priority_pairs": 15,
+      "arrival_pairs": 0,
+      "pairs": 15,
+      "priority_pair_share": 1.0,
+      "arrival_pair_share": 0.0,
+      "call": "strict_priority",
+      "send_order": "ascending",
+      "tau_fee_send": 1.0,
+      "tau_send_b": -1.0,
+      "target_slot": 462840780,
+      "slot_minus_target": 0,
+      "block_leader": "9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "DK9sHVjV47u2trp7tVpAeCsgdaTcGyBh8WjZLUmCCRpM"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T100356Z",
+      "identity": "9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY",
+      "client": "Firedancer",
+      "version": "26.10.4",
+      "ladder": "nonconflict",
+      "slot": 462840782,
+      "n": 4,
+      "tau_b": -1.0,
+      "exact_p_value": 0.041666666666666664,
+      "priority_pairs": 6,
+      "arrival_pairs": 0,
+      "pairs": 6,
+      "priority_pair_share": 1.0,
+      "arrival_pair_share": 0.0,
+      "call": "inconclusive",
+      "send_order": "ascending",
+      "tau_fee_send": 1.0,
+      "tau_send_b": -1.0,
+      "target_slot": 462840782,
+      "slot_minus_target": 0,
+      "block_leader": "9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "3nb8bwDUDvWt5eQbi6rFQnUvqUz6FrtsQe2UD4CiiXPY",
+        "5PMDsXzRfYqt1vhcJNtJEDjeAnu4H1nYHYgf1LRM8kEQ",
+        "8Zn5AC7D9g5io3f4s74a81VcbEYArwkuBEjobkNU1FHx",
+        "DXy4zQkASZvFG1MraMCMCrm4GEbnzeqQVX3Ptno6w1sU"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T100356Z",
+      "identity": "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy",
+      "client": "AgaveBam",
+      "version": "4.4.0-rc.1",
+      "ladder": "conflict",
+      "slot": 462840768,
+      "n": 6,
+      "tau_b": -1.0,
+      "exact_p_value": 0.001388888888888889,
+      "priority_pairs": 15,
+      "arrival_pairs": 0,
+      "pairs": 15,
+      "priority_pair_share": 1.0,
+      "arrival_pair_share": 0.0,
+      "call": "strict_priority",
+      "send_order": "ascending",
+      "tau_fee_send": 1.0,
+      "tau_send_b": -1.0,
+      "target_slot": 462840768,
+      "slot_minus_target": 0,
+      "block_leader": "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "DK9sHVjV47u2trp7tVpAeCsgdaTcGyBh8WjZLUmCCRpM"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T100356Z",
+      "identity": "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy",
+      "client": "AgaveBam",
+      "version": "4.4.0-rc.1",
+      "ladder": "nonconflict",
+      "slot": 462840769,
+      "n": 4,
+      "tau_b": -0.3333333333333333,
+      "exact_p_value": 0.375,
+      "priority_pairs": 4,
+      "arrival_pairs": 2,
+      "pairs": 6,
+      "priority_pair_share": 0.6666666666666666,
+      "arrival_pair_share": 0.3333333333333333,
+      "call": "inconclusive",
+      "send_order": "ascending",
+      "tau_fee_send": 1.0,
+      "tau_send_b": -0.3333333333333333,
+      "target_slot": 462840770,
+      "slot_minus_target": -1,
+      "block_leader": "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "3nb8bwDUDvWt5eQbi6rFQnUvqUz6FrtsQe2UD4CiiXPY",
+        "5PMDsXzRfYqt1vhcJNtJEDjeAnu4H1nYHYgf1LRM8kEQ",
+        "8Zn5AC7D9g5io3f4s74a81VcbEYArwkuBEjobkNU1FHx",
+        "DXy4zQkASZvFG1MraMCMCrm4GEbnzeqQVX3Ptno6w1sU"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T100356Z",
+      "identity": "Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk",
+      "client": "HarmonicAgave",
+      "version": "4.3.2",
+      "ladder": "conflict",
+      "slot": 462840756,
+      "n": 6,
+      "tau_b": -0.3333333333333333,
+      "exact_p_value": 0.23472222222222222,
+      "priority_pairs": 10,
+      "arrival_pairs": 5,
+      "pairs": 15,
+      "priority_pair_share": 0.6666666666666666,
+      "arrival_pair_share": 0.3333333333333333,
+      "call": "no_rule_detected",
+      "send_order": "ascending",
+      "tau_fee_send": 1.0,
+      "tau_send_b": -0.3333333333333333,
+      "target_slot": 462840756,
+      "slot_minus_target": 0,
+      "block_leader": "Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "DK9sHVjV47u2trp7tVpAeCsgdaTcGyBh8WjZLUmCCRpM"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T100356Z",
+      "identity": "Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk",
+      "client": "HarmonicAgave",
+      "version": "4.3.2",
+      "ladder": "nonconflict",
+      "slot": 462840758,
+      "n": 4,
+      "tau_b": 0.3333333333333333,
+      "exact_p_value": 0.375,
+      "priority_pairs": 2,
+      "arrival_pairs": 4,
+      "pairs": 6,
+      "priority_pair_share": 0.3333333333333333,
+      "arrival_pair_share": 0.6666666666666666,
+      "call": "inconclusive",
+      "send_order": "ascending",
+      "tau_fee_send": 1.0,
+      "tau_send_b": 0.3333333333333333,
+      "target_slot": 462840758,
+      "slot_minus_target": 0,
+      "block_leader": "Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "3nb8bwDUDvWt5eQbi6rFQnUvqUz6FrtsQe2UD4CiiXPY",
+        "5PMDsXzRfYqt1vhcJNtJEDjeAnu4H1nYHYgf1LRM8kEQ",
+        "8Zn5AC7D9g5io3f4s74a81VcbEYArwkuBEjobkNU1FHx",
+        "DXy4zQkASZvFG1MraMCMCrm4GEbnzeqQVX3Ptno6w1sU"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T100356Z",
+      "identity": "HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU",
+      "client": "JitoLabs",
+      "version": "4.3.2",
+      "ladder": "conflict",
+      "slot": 462840784,
+      "n": 6,
+      "tau_b": -1.0,
+      "exact_p_value": 0.001388888888888889,
+      "priority_pairs": 15,
+      "arrival_pairs": 0,
+      "pairs": 15,
+      "priority_pair_share": 1.0,
+      "arrival_pair_share": 0.0,
+      "call": "strict_priority",
+      "send_order": "ascending",
+      "tau_fee_send": 1.0,
+      "tau_send_b": -1.0,
+      "target_slot": 462840784,
+      "slot_minus_target": 0,
+      "block_leader": "HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "DK9sHVjV47u2trp7tVpAeCsgdaTcGyBh8WjZLUmCCRpM"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T100356Z",
+      "identity": "HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU",
+      "client": "JitoLabs",
+      "version": "4.3.2",
+      "ladder": "nonconflict",
+      "slot": 462840786,
+      "n": 4,
+      "tau_b": -0.3333333333333333,
+      "exact_p_value": 0.375,
+      "priority_pairs": 4,
+      "arrival_pairs": 2,
+      "pairs": 6,
+      "priority_pair_share": 0.6666666666666666,
+      "arrival_pair_share": 0.3333333333333333,
+      "call": "inconclusive",
+      "send_order": "ascending",
+      "tau_fee_send": 1.0,
+      "tau_send_b": -0.3333333333333333,
+      "target_slot": 462840786,
+      "slot_minus_target": 0,
+      "block_leader": "HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "3nb8bwDUDvWt5eQbi6rFQnUvqUz6FrtsQe2UD4CiiXPY",
+        "5PMDsXzRfYqt1vhcJNtJEDjeAnu4H1nYHYgf1LRM8kEQ",
+        "8Zn5AC7D9g5io3f4s74a81VcbEYArwkuBEjobkNU1FHx",
+        "DXy4zQkASZvFG1MraMCMCrm4GEbnzeqQVX3Ptno6w1sU"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T100356Z",
+      "identity": "JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b",
+      "client": "HarmonicFiredancer",
+      "version": "26.10.4",
+      "ladder": "conflict",
+      "slot": 462840740,
+      "n": 6,
+      "tau_b": -0.6,
+      "exact_p_value": 0.06805555555555555,
+      "priority_pairs": 12,
+      "arrival_pairs": 3,
+      "pairs": 15,
+      "priority_pair_share": 0.8,
+      "arrival_pair_share": 0.2,
+      "call": "no_rule_detected",
+      "send_order": "ascending",
+      "tau_fee_send": 1.0,
+      "tau_send_b": -0.6,
+      "target_slot": 462840740,
+      "slot_minus_target": 0,
+      "block_leader": "JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "DK9sHVjV47u2trp7tVpAeCsgdaTcGyBh8WjZLUmCCRpM"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T100356Z",
+      "identity": "JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b",
+      "client": "HarmonicFiredancer",
+      "version": "26.10.4",
+      "ladder": "nonconflict",
+      "slot": 462840742,
+      "n": 4,
+      "tau_b": 0.0,
+      "exact_p_value": 0.25,
+      "priority_pairs": 3,
+      "arrival_pairs": 3,
+      "pairs": 6,
+      "priority_pair_share": 0.5,
+      "arrival_pair_share": 0.5,
+      "call": "inconclusive",
+      "send_order": "ascending",
+      "tau_fee_send": 1.0,
+      "tau_send_b": 0.0,
+      "target_slot": 462840742,
+      "slot_minus_target": 0,
+      "block_leader": "JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "3nb8bwDUDvWt5eQbi6rFQnUvqUz6FrtsQe2UD4CiiXPY",
+        "5PMDsXzRfYqt1vhcJNtJEDjeAnu4H1nYHYgf1LRM8kEQ",
+        "8Zn5AC7D9g5io3f4s74a81VcbEYArwkuBEjobkNU1FHx",
+        "DXy4zQkASZvFG1MraMCMCrm4GEbnzeqQVX3Ptno6w1sU"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T110321Z",
+      "identity": "7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE",
+      "client": "Agave",
+      "version": "4.3.2",
+      "ladder": "conflict",
+      "slot": 462857452,
+      "n": 6,
+      "tau_b": -1.0,
+      "exact_p_value": 0.001388888888888889,
+      "priority_pairs": 15,
+      "arrival_pairs": 6,
+      "pairs": 15,
+      "priority_pair_share": 1.0,
+      "arrival_pair_share": 0.4,
+      "call": "strict_priority",
+      "send_order": "shuffled",
+      "tau_fee_send": 0.2,
+      "tau_send_b": -0.2,
+      "target_slot": 462857452,
+      "slot_minus_target": 0,
+      "block_leader": "7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "DK9sHVjV47u2trp7tVpAeCsgdaTcGyBh8WjZLUmCCRpM"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T110321Z",
+      "identity": "9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY",
+      "client": "Firedancer",
+      "version": "26.10.4",
+      "ladder": "conflict",
+      "slot": 462857544,
+      "n": 6,
+      "tau_b": -1.0,
+      "exact_p_value": 0.001388888888888889,
+      "priority_pairs": 15,
+      "arrival_pairs": 9,
+      "pairs": 15,
+      "priority_pair_share": 1.0,
+      "arrival_pair_share": 0.6,
+      "call": "strict_priority",
+      "send_order": "shuffled",
+      "tau_fee_send": -0.2,
+      "tau_send_b": 0.2,
+      "target_slot": 462857544,
+      "slot_minus_target": 0,
+      "block_leader": "9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "DK9sHVjV47u2trp7tVpAeCsgdaTcGyBh8WjZLUmCCRpM"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T110321Z",
+      "identity": "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy",
+      "client": "AgaveBam",
+      "version": "4.4.0-rc.1",
+      "ladder": "conflict",
+      "slot": 462857608,
+      "n": 6,
+      "tau_b": -1.0,
+      "exact_p_value": 0.001388888888888889,
+      "priority_pairs": 15,
+      "arrival_pairs": 8,
+      "pairs": 15,
+      "priority_pair_share": 1.0,
+      "arrival_pair_share": 0.5333333333333333,
+      "call": "strict_priority",
+      "send_order": "shuffled",
+      "tau_fee_send": -0.06666666666666667,
+      "tau_send_b": 0.06666666666666667,
+      "target_slot": 462857608,
+      "slot_minus_target": 0,
+      "block_leader": "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "DK9sHVjV47u2trp7tVpAeCsgdaTcGyBh8WjZLUmCCRpM"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T110321Z",
+      "identity": "Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk",
+      "client": "HarmonicAgave",
+      "version": "4.3.2",
+      "ladder": "conflict",
+      "slot": 462857432,
+      "n": 6,
+      "tau_b": -0.6,
+      "exact_p_value": 0.06805555555555555,
+      "priority_pairs": 12,
+      "arrival_pairs": 4,
+      "pairs": 15,
+      "priority_pair_share": 0.8,
+      "arrival_pair_share": 0.26666666666666666,
+      "call": "no_rule_detected",
+      "send_order": "shuffled",
+      "tau_fee_send": 0.3333333333333333,
+      "tau_send_b": -0.4666666666666667,
+      "target_slot": 462857432,
+      "slot_minus_target": 0,
+      "block_leader": "Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "DK9sHVjV47u2trp7tVpAeCsgdaTcGyBh8WjZLUmCCRpM"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T110321Z",
+      "identity": "HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU",
+      "client": "JitoLabs",
+      "version": "4.3.2",
+      "ladder": "conflict",
+      "slot": 462857372,
+      "n": 6,
+      "tau_b": -1.0,
+      "exact_p_value": 0.001388888888888889,
+      "priority_pairs": 15,
+      "arrival_pairs": 10,
+      "pairs": 15,
+      "priority_pair_share": 1.0,
+      "arrival_pair_share": 0.6666666666666666,
+      "call": "strict_priority",
+      "send_order": "shuffled",
+      "tau_fee_send": -0.3333333333333333,
+      "tau_send_b": 0.3333333333333333,
+      "target_slot": 462857372,
+      "slot_minus_target": 0,
+      "block_leader": "HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "DK9sHVjV47u2trp7tVpAeCsgdaTcGyBh8WjZLUmCCRpM"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    },
+    {
+      "run": "20261029T110321Z",
+      "identity": "JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b",
+      "client": "HarmonicFiredancer",
+      "version": "26.10.4",
+      "ladder": "conflict",
+      "slot": 462857824,
+      "n": 6,
+      "tau_b": 0.8666666666666667,
+      "exact_p_value": 0.008333333333333333,
+      "priority_pairs": 1,
+      "arrival_pairs": 9,
+      "pairs": 15,
+      "priority_pair_share": 0.06666666666666667,
+      "arrival_pair_share": 0.6,
+      "call": "no_rule_detected",
+      "send_order": "shuffled",
+      "tau_fee_send": 0.06666666666666667,
+      "tau_send_b": 0.2,
+      "target_slot": 462857824,
+      "slot_minus_target": 0,
+      "block_leader": "JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b",
+      "leader_matches": true,
+      "ladder_writable_accounts": [
+        "DK9sHVjV47u2trp7tVpAeCsgdaTcGyBh8WjZLUmCCRpM"
+      ],
+      "foreign_writers": 0,
+      "contaminated": false
+    }
+  ],
+  "pooled_pair_shares": [
+    {
+      "scope": "all",
+      "ladder_clusters": 30,
+      "pairs": 396,
+      "priority_pairs": 298,
+      "priority_pair_share": 0.7525252525252525,
+      "priority_ci_low": 0.6304909560723514,
+      "priority_ci_high": 0.8641975308641975,
+      "arrival_pairs": 127,
+      "arrival_pair_share": 0.3207070707070707,
+      "arrival_ci_low": 0.2127659574468085,
+      "arrival_ci_high": 0.43287037037037035,
+      "bootstrap_unit": "validator-run ladder",
+      "bootstrap_replicates": 10000,
+      "bootstrap_seed": 20261029
+    },
+    {
+      "scope": "conflict",
+      "ladder_clusters": 18,
+      "pairs": 270,
+      "priority_pairs": 237,
+      "priority_pair_share": 0.8777777777777778,
+      "priority_ci_low": 0.7555555555555555,
+      "priority_ci_high": 0.9666666666666667,
+      "arrival_pairs": 62,
+      "arrival_pair_share": 0.22962962962962963,
+      "arrival_ci_low": 0.11851851851851852,
+      "arrival_ci_high": 0.34444444444444444,
+      "bootstrap_unit": "validator-run ladder",
+      "bootstrap_replicates": 10000,
+      "bootstrap_seed": 20261029
+    },
+    {
+      "scope": "nonconflict",
+      "ladder_clusters": 12,
+      "pairs": 126,
+      "priority_pairs": 61,
+      "priority_pair_share": 0.48412698412698413,
+      "priority_ci_low": 0.29914529914529914,
+      "priority_ci_high": 0.6888888888888889,
+      "arrival_pairs": 65,
+      "arrival_pair_share": 0.5158730158730159,
+      "arrival_ci_low": 0.3111111111111111,
+      "arrival_ci_high": 0.7008547008547008,
+      "bootstrap_unit": "validator-run ladder",
+      "bootstrap_replicates": 10000,
+      "bootstrap_seed": 20261029
+    }
+  ],
+  "cross_run_consistency": [
+    {
+      "identity": "7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE",
+      "client": "Agave",
+      "ladder": "conflict",
+      "runs": [
+        "20261029T094113Z",
+        "20261029T100356Z",
+        "20261029T110321Z"
+      ],
+      "n": [
+        6,
+        6,
+        6
+      ],
+      "calls": [
+        "strict_priority",
+        "strict_priority",
+        "strict_priority"
+      ],
+      "tau_b": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "priority_pair_share": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "consistency": "same_call"
+    },
+    {
+      "identity": "7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE",
+      "client": "Agave",
+      "ladder": "nonconflict",
+      "runs": [
+        "20261029T094113Z",
+        "20261029T100356Z"
+      ],
+      "n": [
+        6,
+        4
+      ],
+      "calls": [
+        "arrival",
+        "inconclusive"
+      ],
+      "tau_b": [
+        1.0,
+        0.6666666666666666
+      ],
+      "priority_pair_share": [
+        0.0,
+        0.16666666666666666
+      ],
+      "consistency": "insufficient_second_run"
+    },
+    {
+      "identity": "9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY",
+      "client": "Firedancer",
+      "ladder": "conflict",
+      "runs": [
+        "20261029T094113Z",
+        "20261029T100356Z",
+        "20261029T110321Z"
+      ],
+      "n": [
+        6,
+        6,
+        6
+      ],
+      "calls": [
+        "strict_priority",
+        "strict_priority",
+        "strict_priority"
+      ],
+      "tau_b": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "priority_pair_share": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "consistency": "same_call"
+    },
+    {
+      "identity": "9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY",
+      "client": "Firedancer",
+      "ladder": "nonconflict",
+      "runs": [
+        "20261029T094113Z",
+        "20261029T100356Z"
+      ],
+      "n": [
+        6,
+        4
+      ],
+      "calls": [
+        "strict_priority",
+        "inconclusive"
+      ],
+      "tau_b": [
+        -1.0,
+        -1.0
+      ],
+      "priority_pair_share": [
+        1.0,
+        1.0
+      ],
+      "consistency": "insufficient_second_run"
+    },
+    {
+      "identity": "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy",
+      "client": "AgaveBam",
+      "ladder": "conflict",
+      "runs": [
+        "20261029T094113Z",
+        "20261029T100356Z",
+        "20261029T110321Z"
+      ],
+      "n": [
+        6,
+        6,
+        6
+      ],
+      "calls": [
+        "strict_priority",
+        "strict_priority",
+        "strict_priority"
+      ],
+      "tau_b": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "priority_pair_share": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "consistency": "same_call"
+    },
+    {
+      "identity": "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy",
+      "client": "AgaveBam",
+      "ladder": "nonconflict",
+      "runs": [
+        "20261029T094113Z",
+        "20261029T100356Z"
+      ],
+      "n": [
+        6,
+        4
+      ],
+      "calls": [
+        "no_rule_detected",
+        "inconclusive"
+      ],
+      "tau_b": [
+        -0.4666666666666667,
+        -0.3333333333333333
+      ],
+      "priority_pair_share": [
+        0.7333333333333333,
+        0.6666666666666666
+      ],
+      "consistency": "insufficient_second_run"
+    },
+    {
+      "identity": "Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk",
+      "client": "HarmonicAgave",
+      "ladder": "conflict",
+      "runs": [
+        "20261029T094113Z",
+        "20261029T100356Z",
+        "20261029T110321Z"
+      ],
+      "n": [
+        6,
+        6,
+        6
+      ],
+      "calls": [
+        "no_rule_detected",
+        "no_rule_detected",
+        "no_rule_detected"
+      ],
+      "tau_b": [
+        -0.2,
+        -0.3333333333333333,
+        -0.6
+      ],
+      "priority_pair_share": [
+        0.6,
+        0.6666666666666666,
+        0.8
+      ],
+      "consistency": "same_call"
+    },
+    {
+      "identity": "Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk",
+      "client": "HarmonicAgave",
+      "ladder": "nonconflict",
+      "runs": [
+        "20261029T094113Z",
+        "20261029T100356Z"
+      ],
+      "n": [
+        6,
+        4
+      ],
+      "calls": [
+        "no_rule_detected",
+        "inconclusive"
+      ],
+      "tau_b": [
+        0.3333333333333333,
+        0.3333333333333333
+      ],
+      "priority_pair_share": [
+        0.3333333333333333,
+        0.3333333333333333
+      ],
+      "consistency": "insufficient_second_run"
+    },
+    {
+      "identity": "HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU",
+      "client": "JitoLabs",
+      "ladder": "conflict",
+      "runs": [
+        "20261029T094113Z",
+        "20261029T100356Z",
+        "20261029T110321Z"
+      ],
+      "n": [
+        6,
+        6,
+        6
+      ],
+      "calls": [
+        "strict_priority",
+        "strict_priority",
+        "strict_priority"
+      ],
+      "tau_b": [
+        -1.0,
+        -1.0,
+        -1.0
+      ],
+      "priority_pair_share": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "consistency": "same_call"
+    },
+    {
+      "identity": "HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU",
+      "client": "JitoLabs",
+      "ladder": "nonconflict",
+      "runs": [
+        "20261029T094113Z",
+        "20261029T100356Z"
+      ],
+      "n": [
+        6,
+        4
+      ],
+      "calls": [
+        "no_rule_detected",
+        "inconclusive"
+      ],
+      "tau_b": [
+        0.3333333333333333,
+        -0.3333333333333333
+      ],
+      "priority_pair_share": [
+        0.3333333333333333,
+        0.6666666666666666
+      ],
+      "consistency": "insufficient_second_run"
+    },
+    {
+      "identity": "JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b",
+      "client": "HarmonicFiredancer",
+      "ladder": "conflict",
+      "runs": [
+        "20261029T094113Z",
+        "20261029T100356Z",
+        "20261029T110321Z"
+      ],
+      "n": [
+        6,
+        6,
+        6
+      ],
+      "calls": [
+        "priority",
+        "no_rule_detected",
+        "no_rule_detected"
+      ],
+      "tau_b": [
+        -0.7333333333333333,
+        -0.6,
+        0.8666666666666667
+      ],
+      "priority_pair_share": [
+        0.8666666666666667,
+        0.8,
+        0.06666666666666667
+      ],
+      "consistency": "different_call"
+    },
+    {
+      "identity": "JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b",
+      "client": "HarmonicFiredancer",
+      "ladder": "nonconflict",
+      "runs": [
+        "20261029T094113Z",
+        "20261029T100356Z"
+      ],
+      "n": [
+        6,
+        4
+      ],
+      "calls": [
+        "no_rule_detected",
+        "inconclusive"
+      ],
+      "tau_b": [
+        0.3333333333333333,
+        0.0
+      ],
+      "priority_pair_share": [
+        0.3333333333333333,
+        0.5
+      ],
+      "consistency": "insufficient_second_run"
+    }
+  ],
+  "validator_rollups": [
+    {
+      "identity": "7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE",
+      "client": "Agave",
+      "version": "4.3.2",
+      "ladder": "conflict",
+      "slot_calls": [
+        "strict_priority",
+        "strict_priority",
+        "strict_priority"
+      ],
+      "headline_call": "strict_priority",
+      "inclusive_call": "strict_priority",
+      "contaminated_slots": 0,
+      "inconclusive_slots": 0
+    },
+    {
+      "identity": "7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE",
+      "client": "Agave",
+      "version": "4.3.2",
+      "ladder": "nonconflict",
+      "slot_calls": [
+        "arrival",
+        "inconclusive"
+      ],
+      "headline_call": "arrival",
+      "inclusive_call": "arrival",
+      "contaminated_slots": 0,
+      "inconclusive_slots": 1
+    },
+    {
+      "identity": "9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY",
+      "client": "Firedancer",
+      "version": "26.10.4",
+      "ladder": "conflict",
+      "slot_calls": [
+        "strict_priority",
+        "strict_priority",
+        "strict_priority"
+      ],
+      "headline_call": "strict_priority",
+      "inclusive_call": "strict_priority",
+      "contaminated_slots": 0,
+      "inconclusive_slots": 0
+    },
+    {
+      "identity": "9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY",
+      "client": "Firedancer",
+      "version": "26.10.4",
+      "ladder": "nonconflict",
+      "slot_calls": [
+        "strict_priority",
+        "inconclusive"
+      ],
+      "headline_call": "strict_priority",
+      "inclusive_call": "strict_priority",
+      "contaminated_slots": 0,
+      "inconclusive_slots": 1
+    },
+    {
+      "identity": "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy",
+      "client": "AgaveBam",
+      "version": "4.4.0-rc.1",
+      "ladder": "conflict",
+      "slot_calls": [
+        "strict_priority",
+        "strict_priority",
+        "strict_priority"
+      ],
+      "headline_call": "strict_priority",
+      "inclusive_call": "strict_priority",
+      "contaminated_slots": 0,
+      "inconclusive_slots": 0
+    },
+    {
+      "identity": "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy",
+      "client": "AgaveBam",
+      "version": "4.4.0-rc.1",
+      "ladder": "nonconflict",
+      "slot_calls": [
+        "no_rule_detected",
+        "inconclusive"
+      ],
+      "headline_call": "no_rule_detected",
+      "inclusive_call": "no_rule_detected",
+      "contaminated_slots": 0,
+      "inconclusive_slots": 1
+    },
+    {
+      "identity": "Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk",
+      "client": "HarmonicAgave",
+      "version": "4.3.2",
+      "ladder": "conflict",
+      "slot_calls": [
+        "no_rule_detected",
+        "no_rule_detected",
+        "no_rule_detected"
+      ],
+      "headline_call": "no_rule_detected",
+      "inclusive_call": "no_rule_detected",
+      "contaminated_slots": 0,
+      "inconclusive_slots": 0
+    },
+    {
+      "identity": "Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk",
+      "client": "HarmonicAgave",
+      "version": "4.3.2",
+      "ladder": "nonconflict",
+      "slot_calls": [
+        "no_rule_detected",
+        "inconclusive"
+      ],
+      "headline_call": "no_rule_detected",
+      "inclusive_call": "no_rule_detected",
+      "contaminated_slots": 0,
+      "inconclusive_slots": 1
+    },
+    {
+      "identity": "HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU",
+      "client": "JitoLabs",
+      "version": "4.3.2",
+      "ladder": "conflict",
+      "slot_calls": [
+        "strict_priority",
+        "strict_priority",
+        "strict_priority"
+      ],
+      "headline_call": "strict_priority",
+      "inclusive_call": "strict_priority",
+      "contaminated_slots": 0,
+      "inconclusive_slots": 0
+    },
+    {
+      "identity": "HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU",
+      "client": "JitoLabs",
+      "version": "4.3.2",
+      "ladder": "nonconflict",
+      "slot_calls": [
+        "no_rule_detected",
+        "inconclusive"
+      ],
+      "headline_call": "no_rule_detected",
+      "inclusive_call": "no_rule_detected",
+      "contaminated_slots": 0,
+      "inconclusive_slots": 1
+    },
+    {
+      "identity": "JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b",
+      "client": "HarmonicFiredancer",
+      "version": "26.10.4",
+      "ladder": "conflict",
+      "slot_calls": [
+        "priority",
+        "no_rule_detected",
+        "no_rule_detected"
+      ],
+      "headline_call": "mixed_across_slots",
+      "inclusive_call": "mixed_across_slots",
+      "contaminated_slots": 0,
+      "inconclusive_slots": 0
+    },
+    {
+      "identity": "JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b",
+      "client": "HarmonicFiredancer",
+      "version": "26.10.4",
+      "ladder": "nonconflict",
+      "slot_calls": [
+        "no_rule_detected",
+        "inconclusive"
+      ],
+      "headline_call": "no_rule_detected",
+      "inclusive_call": "no_rule_detected",
+      "contaminated_slots": 0,
+      "inconclusive_slots": 1
+    }
+  ],
+  "block_position_summary": [
+    {
+      "scope": "all",
+      "ladders": 30,
+      "min_first_block_fraction": 0.008403361344537815,
+      "median_first_block_fraction": 0.14708144665041217,
+      "max_last_block_fraction": 0.9101123595505618,
+      "median_block_tx_count": 234.5,
+      "median_foreign_txs_between_rungs": 0.0,
+      "mean_foreign_txs_between_rungs": 1.5579710144927537,
+      "max_foreign_txs_between_rungs": 52
+    },
+    {
+      "scope": "conflict",
+      "ladders": 18,
+      "min_first_block_fraction": 0.008403361344537815,
+      "median_first_block_fraction": 0.11171130046662608,
+      "max_last_block_fraction": 0.7800829875518672,
+      "median_block_tx_count": 248.0,
+      "median_foreign_txs_between_rungs": 0.0,
+      "mean_foreign_txs_between_rungs": 1.7555555555555555,
+      "max_foreign_txs_between_rungs": 52
+    },
+    {
+      "scope": "nonconflict",
+      "ladders": 12,
+      "min_first_block_fraction": 0.039525691699604744,
+      "median_first_block_fraction": 0.3057291198417693,
+      "max_last_block_fraction": 0.9101123595505618,
+      "median_block_tx_count": 209.5,
+      "median_foreign_txs_between_rungs": 0.0,
+      "mean_foreign_txs_between_rungs": 1.1875,
+      "max_foreign_txs_between_rungs": 18
+    }
+  ]
+}

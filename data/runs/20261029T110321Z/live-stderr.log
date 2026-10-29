@@ -1,0 +1,46 @@
+2026-10-29 11:03:21,974 INFO slot clock: slotSubscribe
+2026-10-29 11:03:54,266 INFO [8624450dae4f9064] Negotiated protocol version 0x00000001 (VERSION_1)
+2026-10-29 11:03:54,267 INFO [8624450dae4f9064] ALPN negotiated protocol solana-tpu
+2026-10-29 11:03:54,269 INFO warmed 64.130.57.215:8002 in 0.099s
+2026-10-29 11:03:56,475 INFO submitted 6 txs via tpu x1 at slot 462857371 to ['64.130.57.215:8002']
+2026-10-29 11:03:57,672 INFO [8624450dae4f9064] Connection close received (code 0x1, reason dropped)
+2026-10-29 11:04:06,675 INFO [c705f404018367f6] Retrying with token (85 bytes)
+2026-10-29 11:04:06,759 INFO [c705f404018367f6] Negotiated protocol version 0x00000001 (VERSION_1)
+2026-10-29 11:04:06,760 INFO [c705f404018367f6] ALPN negotiated protocol solana-tpu
+2026-10-29 11:04:06,761 INFO warmed 198.13.140.105:12341 in 0.171s
+2026-10-29 11:04:09,037 INFO submitted 6 txs via tpu x1 at slot 462857431 to ['198.13.140.105:12341']
+2026-10-29 11:04:11,059 INFO [9df8db65c29f3b50] Negotiated protocol version 0x00000001 (VERSION_1)
+2026-10-29 11:04:11,060 INFO [9df8db65c29f3b50] ALPN negotiated protocol solana-tpu
+2026-10-29 11:04:11,060 INFO warmed 5.199.172.176:12002 in 0.127s
+2026-10-29 11:04:13,400 INFO submitted 6 txs via tpu x1 at slot 462857451 to ['5.199.172.176:12002']
+2026-10-29 11:04:30,804 INFO [a9657307befb6a1c] Retrying with token (85 bytes)
+2026-10-29 11:04:30,882 INFO [a9657307befb6a1c] Negotiated protocol version 0x00000001 (VERSION_1)
+2026-10-29 11:04:30,884 INFO [a9657307befb6a1c] ALPN negotiated protocol solana-tpu
+2026-10-29 11:04:30,884 INFO warmed 86.54.152.246:9007 in 0.164s
+2026-10-29 11:04:32,945 INFO submitted 6 txs via tpu x1 at slot 462857543 to ['86.54.152.246:9007']
+2026-10-29 11:04:44,588 INFO [fa7b0d5407725ca1] Negotiated protocol version 0x00000001 (VERSION_1)
+2026-10-29 11:04:44,589 INFO [fa7b0d5407725ca1] ALPN negotiated protocol solana-tpu
+2026-10-29 11:04:44,590 INFO warmed 208.91.105.53:5010 in 0.007s
+2026-10-29 11:04:46,856 INFO submitted 6 txs via tpu x1 at slot 462857607 to ['208.91.105.53:5010']
+2026-10-29 11:05:31,171 INFO [1afa022d506a81c4] Retrying with token (85 bytes)
+2026-10-29 11:05:31,255 INFO [1afa022d506a81c4] Negotiated protocol version 0x00000001 (VERSION_1)
+2026-10-29 11:05:31,256 INFO [1afa022d506a81c4] ALPN negotiated protocol solana-tpu
+2026-10-29 11:05:31,256 INFO warmed 198.13.140.105:12349 in 0.171s
+2026-10-29 11:05:33,349 INFO submitted 6 txs via tpu x1 at slot 462857823 to ['198.13.140.105:12349']
+2026-10-29 11:06:03,420 INFO reconciled e1071-20261029T110321Z to 180186 on-chain lamports (0 unread) (ledger 940786 -> 940786)
+LIVE
+experiment: e1071-20261029T110321Z
+source: rpc
+alpenglow regime: after (ok=True)
+planned fee: 0.000180186 SOL (180186 lamports) / cap 0.001260600 SOL
+net after sweep: 0.000180186 SOL; peak including temporary rent: 0.000180186 SOL
+targets: 6 families: firedancer, jito-solana, agave, harmonic-firedancer, harmonic-agave, agave-bam
+  9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY  Firedancer 26.10.4  tpu@462857544
+  HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU  JitoLabs 4.3.2  tpu@462857372
+  7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE  Agave 4.3.2  tpu@462857452
+  JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b  HarmonicFiredancer 26.10.4  tpu@462857824
+  Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk  HarmonicAgave 4.3.2  tpu@462857432
+  DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy  AgaveBam 4.4.0-rc.1  tpu@462857608
+planned transactions: 36
+signed: 36  sent: 36
+note: conflict ladder only: no non-conflict payers, no funding, no rent
