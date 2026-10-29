@@ -4,7 +4,7 @@ Copy this file to the submission report after a live mainnet run. Leave the sect
 
 The decision rule, the sign of tau, and the words `strict_priority`, `priority`, `arrival`, `no_rule_detected`, `inconclusive`, `mixed_across_slots`, and `contaminated` are defined in [METHODOLOGY.md](METHODOLOGY.md). Do not relabel a slot because the story reads better.
 
-Tau-b is Kendall tau-b between `priority_fee_lamports` and `block_index`, with index 0 first in the block. A priority rule pushes tau-b toward −1. Low-fee-first transmission makes an arrival rule push tau-b toward +1. `priority_pairwise` is the fraction of pairs in which the higher fee has the smaller index, and it runs from 0 to 1.
+Tau-b is Kendall tau-b between `priority_fee_lamports` and `block_index`, with index 0 first in the block. A priority rule pushes tau-b toward −1. With low-fee-first transmission (`SEND_ORDER=ascending`) a FIFO arrival rule pushes tau-b toward +1, and a last-in-first-out drain is indistinguishable from a priority rule. With `SEND_ORDER=shuffled`, read arrival from `tau_send_b` instead (see METHODOLOGY section 9.3.1). `priority_pairwise` is the fraction of pairs in which the higher fee has the smaller index, and it runs from 0 to 1.
 
 ## Study header
 
@@ -21,12 +21,14 @@ Tau-b is Kendall tau-b between `priority_fee_lamports` and `block_index`, with i
 | Spend cap | 0.05 SOL |
 | Lamports signed | |
 | Lamports observed landed (sum of `meta.fee` for our signatures) | |
+| Rent principal moved to probe payers, and lamports swept back | |
 | RPC used | endpoint host only, no API key |
 | Sending host | city or region, one vantage point |
 | Burst offset before the target window | manifest value |
 | Compute-unit limit, both ladders | |
 | Fee rungs (lamports) | |
-| Transmission order | lowest fee first |
+| Transmission order (`SEND_ORDER`, seed) | |
+| Ladders (`LADDERS`) and `TPU_COPIES` | |
 | `getAgGenesisCert` block slot, if the RPC returned one | |
 
 Every slot cited below was read back with `getBlock` and is ≥ 459,653,000. Devnet and localnet runs are not in this report.
@@ -65,9 +67,7 @@ Signatures for that slot, in block order:
 | --- | --- | --- | --- | --- | --- |
 | | | | | | |
 
-A judge checks a row by calling `getBlock` on the slot, finding the signature, and confirming the index. The raw response used here is `data/runs/<run>/blocks/<slot>.json`.
-
-<!-- TODO: sync with measure/ -->
+A judge checks a row by calling `getBlock` on the slot, finding the signature, and confirming the index. The raw response used here is `data/runs/<run>/blocks/<slot>.json` from the collector, or `<slot>.json.gz` from `python -m analysis.fetch_blocks`. `analysis/output/EVIDENCE.md` already lists each ladder's signatures in block order with explorer links; link to its anchor rather than copying it.
 
 ## Measurement log
 
