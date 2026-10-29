@@ -1,0 +1,13 @@
+identity,client,version,ladder,slot_calls,headline_call,inclusive_call,contaminated_slots,inconclusive_slots
+7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE,Agave,4.3.2,conflict,"[""strict_priority"",""strict_priority""]",strict_priority,strict_priority,0,0
+7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE,Agave,4.3.2,nonconflict,"[""arrival"",""inconclusive""]",arrival,arrival,0,1
+9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY,Firedancer,26.10.4,conflict,"[""strict_priority"",""strict_priority""]",strict_priority,strict_priority,0,0
+9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY,Firedancer,26.10.4,nonconflict,"[""strict_priority"",""inconclusive""]",strict_priority,strict_priority,0,1
+DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy,AgaveBam,4.4.0-rc.1,conflict,"[""strict_priority"",""strict_priority""]",strict_priority,strict_priority,0,0
+DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy,AgaveBam,4.4.0-rc.1,nonconflict,"[""no_rule_detected"",""inconclusive""]",no_rule_detected,no_rule_detected,0,1
+Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk,HarmonicAgave,4.3.2,conflict,"[""no_rule_detected"",""no_rule_detected""]",no_rule_detected,no_rule_detected,0,0
+Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk,HarmonicAgave,4.3.2,nonconflict,"[""no_rule_detected"",""inconclusive""]",no_rule_detected,no_rule_detected,0,1
+HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU,JitoLabs,4.3.2,conflict,"[""strict_priority"",""strict_priority""]",strict_priority,strict_priority,0,0
+HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU,JitoLabs,4.3.2,nonconflict,"[""no_rule_detected"",""inconclusive""]",no_rule_detected,no_rule_detected,0,1
+JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b,HarmonicFiredancer,26.10.4,conflict,"[""priority"",""no_rule_detected""]",mixed_across_slots,mixed_across_slots,0,0
+JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b,HarmonicFiredancer,26.10.4,nonconflict,"[""no_rule_detected"",""inconclusive""]",no_rule_detected,no_rule_detected,0,1

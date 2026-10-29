@@ -8,6 +8,9 @@ from .core import (
     kendall_tau_b,
     pair_counts,
     pooled_pair_shares,
+    raw_block_checks,
+    rollup,
+    validator_rollups,
     write_outputs,
 )
 
@@ -19,5 +22,8 @@ __all__ = [
     "kendall_tau_b",
     "pair_counts",
     "pooled_pair_shares",
+    "raw_block_checks",
+    "rollup",
+    "validator_rollups",
     "write_outputs",
 ]

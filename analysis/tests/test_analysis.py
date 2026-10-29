@@ -8,6 +8,9 @@ from analysis.core import (
     kendall_tau_b,
     pair_counts,
     pooled_pair_shares,
+    raw_block_checks,
+    rollup,
+    send_order_label,
     write_outputs,
 )
 
@@ -46,6 +49,69 @@ class StatisticsTests(unittest.TestCase):
 
     def test_four_rungs_are_inconclusive_even_when_strict(self):
         self.assertEqual(classify(4, -1, 1 / 24, 1, 0), "inconclusive")
+
+    def test_arrival_uses_send_rank_when_send_order_is_shuffled(self):
+        fees = [4, 2, 0, 1, 16, 8]
+        sends = list(range(6))
+        indexes = [0, 1, 2, 3, 4, 5]
+        tau = kendall_tau_b(fees, indexes)
+        self.assertGreater(tau, -0.6)
+        self.assertLess(tau, 0.6)
+        self.assertEqual(
+            classify(
+                6,
+                tau,
+                exact_directional_p_value(fees, indexes),
+                0.4,
+                1.0,
+                kendall_tau_b(sends, indexes),
+                exact_directional_p_value(sends, indexes),
+            ),
+            "arrival",
+        )
+        self.assertEqual(send_order_label(fees, sends), "shuffled")
+        self.assertEqual(send_order_label([0, 1, 2], [0, 1, 2]), "ascending")
+
+    def test_rollup_follows_the_methodology_list(self):
+        self.assertEqual(rollup(["strict_priority", "strict_priority"]), "strict_priority")
+        self.assertEqual(rollup(["strict_priority", "priority"]), "priority")
+        self.assertEqual(rollup(["priority", "no_rule_detected"]), "mixed_across_slots")
+        self.assertEqual(rollup([]), "inconclusive")
+
+    def test_raw_block_checks_flag_foreign_writers(self):
+        def tx(signature, *writable):
+            return {
+                "transaction": {
+                    "signatures": [signature],
+                    "accountKeys": [
+                        {"pubkey": key, "writable": True} for key in writable
+                    ]
+                    + [{"pubkey": "11111111111111111111111111111111", "writable": False}],
+                }
+            }
+
+        block = {
+            "rewards": [{"pubkey": "Leader", "rewardType": "Fee"}],
+            "transactions": [
+                tx("a", "Funder"),
+                tx("foreign", "Funder", "Someone"),
+                tx("b", "Funder"),
+                tx("other", "Elsewhere"),
+            ],
+        }
+        rows = [
+            {"signature": "a", "block_index": 0},
+            {"signature": "b", "block_index": 2},
+        ]
+        checks = raw_block_checks(block, "conflict", rows, {"a", "b"})
+        self.assertEqual(checks["block_leader"], "Leader")
+        self.assertEqual(checks["ladder_writable_accounts"], ["Funder"])
+        self.assertEqual(checks["foreign_writers"], 1)
+        self.assertTrue(checks["contaminated"])
+        with self.assertRaises(ValueError):
+            raw_block_checks(block, "nonconflict", rows, {"a", "b"})
+        with self.assertRaises(ValueError):
+            raw_block_checks(block, "conflict", [{"signature": "a", "block_index": 1}], {"a"})
 
     def test_bootstrap_is_repeatable_and_cluster_based(self):
         rows = [
@@ -97,6 +163,37 @@ class RealRunIntegrationTests(unittest.TestCase):
                 {"Agave", "Firedancer", "JitoLabs", "AgaveBam"}
                 <= strict_conflict_clients
             )
+            stats = result["ladder_statistics"]
+            self.assertTrue(all(row["leader_matches"] is True for row in stats))
+            self.assertTrue(all(row["contaminated"] is False for row in stats))
+            self.assertEqual({row["send_order"] for row in stats}, {"ascending"})
+            self.assertEqual({row["tau_fee_send"] for row in stats}, {1.0})
+            early = sorted(
+                (row["run"], row["client"]) for row in stats if row["slot_minus_target"] != 0
+            )
+            self.assertEqual(
+                early,
+                [("20261029T094113Z", "Firedancer"), ("20261029T100356Z", "AgaveBam")],
+            )
+            conflict_locks = {
+                row["run"]: len(row["ladder_writable_accounts"])
+                for row in stats
+                if row["ladder"] == "conflict"
+            }
+            self.assertEqual(
+                conflict_locks, {"20261029T094113Z": 2, "20261029T100356Z": 1}
+            )
+            pooled = {row["scope"]: row for row in result["pooled_pair_shares"]}
+            self.assertAlmostEqual(pooled["conflict"]["priority_pair_share"], 164 / 180)
+            headline = {
+                (row["client"], row["ladder"]): row["headline_call"]
+                for row in result["validator_rollups"]
+            }
+            self.assertEqual(
+                headline[("HarmonicFiredancer", "conflict")], "mixed_across_slots"
+            )
+            self.assertEqual(headline[("Agave", "nonconflict")], "arrival")
+            self.assertTrue((Path(temporary) / "EVIDENCE.md").exists())
 
 
 if __name__ == "__main__":

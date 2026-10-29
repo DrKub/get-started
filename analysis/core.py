@@ -9,6 +9,7 @@ the pair comparisons within one ladder are not treated as independent.
 from __future__ import annotations
 
 import csv
+import gzip
 import json
 import math
 import random
@@ -35,11 +36,128 @@ OUTPUT_FIELDS = (
     "priority_pair_share",
     "arrival_pair_share",
     "call",
+    "send_order",
+    "tau_fee_send",
+    "tau_send_b",
+    "target_slot",
+    "slot_minus_target",
+    "block_leader",
+    "leader_matches",
+    "ladder_writable_accounts",
+    "foreign_writers",
+    "contaminated",
+)
+ROLLUP_FIELDS = (
+    "identity",
+    "client",
+    "version",
+    "ladder",
+    "slot_calls",
+    "headline_call",
+    "inclusive_call",
+    "contaminated_slots",
+    "inconclusive_slots",
+)
+SOLSCAN_TX = "https://solscan.io/tx/{}"
+SOLSCAN_BLOCK = "https://solscan.io/block/{}"
+EXPLORER_TX = "https://explorer.solana.com/tx/{}?cluster=mainnet"
+EXPLORER_BLOCK = "https://explorer.solana.com/block/{}?cluster=mainnet"
+# Programs every probe touches. Never writable, listed only so a malformed
+# block cannot make them look like a shared write lock.
+READONLY_PROGRAMS = frozenset(
+    {
+        "11111111111111111111111111111111",
+        "ComputeBudget111111111111111111111111111111",
+    }
 )
 
 
 def read_jsonl(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+
+
+def load_raw_block(run_dir: Path, slot: int) -> dict | None:
+    """Return the stored ``getBlock`` result for ``slot``, or None if absent."""
+    for name in (f"{slot}.json.gz", f"{slot}.json"):
+        path = run_dir / "blocks" / name
+        if not path.exists():
+            continue
+        opener = gzip.open if name.endswith(".gz") else open
+        with opener(path, "rt") as handle:
+            body = json.load(handle)
+        return body.get("result", body)
+    return None
+
+
+def block_leader(block: dict) -> str | None:
+    """The identity that received this block's fee reward, i.e. its leader."""
+    for reward in block.get("rewards") or []:
+        if reward.get("rewardType") == "Fee":
+            return reward.get("pubkey")
+    return None
+
+
+def _writable_keys(transaction: dict) -> set[str]:
+    keys = transaction["transaction"]["accountKeys"]
+    return {
+        key["pubkey"]
+        for key in keys
+        if key.get("writable") and key["pubkey"] not in READONLY_PROGRAMS
+    }
+
+
+def raw_block_checks(
+    block: dict, ladder: str, rows: list[dict], ours: set[str]
+) -> dict:
+    """Re-derive positions from the raw block and test for foreign write locks.
+
+    The conflict ladder's lock set is the writable accounts every rung shares.
+    The non-conflict ladder's lock set is the union of each rung's writable
+    accounts; those must be pairwise disjoint or the ladder was not
+    non-conflicting. A foreign transaction that writes any account in the lock
+    set makes the slot ``contaminated``.
+    """
+    transactions = block["transactions"]
+    position = {tx["transaction"]["signatures"][0]: i for i, tx in enumerate(transactions)}
+    writable = {}
+    for row in rows:
+        index = position.get(row["signature"])
+        if index is None or index != row["block_index"]:
+            raise ValueError(
+                f"raw block disagrees with block_index for {row['signature']}: {index}"
+            )
+        writable[row["signature"]] = _writable_keys(transactions[index])
+    sets = list(writable.values())
+    if ladder == "conflict":
+        lock_set = set.intersection(*sets) if sets else set()
+        if not lock_set:
+            raise ValueError("conflict ladder rungs share no writable account")
+    else:
+        lock_set = set.union(*sets) if sets else set()
+        if sum(len(item) for item in sets) != len(lock_set):
+            raise ValueError("non-conflict ladder rungs share a writable account")
+    foreign = 0
+    for tx in transactions:
+        if tx["transaction"]["signatures"][0] in ours:
+            continue
+        if _writable_keys(tx) & lock_set:
+            foreign += 1
+    return {
+        "block_leader": block_leader(block),
+        "raw_tx_count": len(transactions),
+        "ladder_writable_accounts": sorted(lock_set),
+        "foreign_writers": foreign,
+        "contaminated": foreign > 0,
+    }
+
+
+def send_order_label(fees: list[int], sends: list[int]) -> str:
+    tau = kendall_tau_b(fees, sends)
+    if tau is not None and math.isclose(tau, 1.0):
+        return "ascending"
+    if tau is not None and math.isclose(tau, -1.0):
+        return "descending"
+    return "shuffled"
 
 
 def kendall_tau_b(xs: list[float], ys: list[float]) -> float | None:
@@ -109,17 +227,48 @@ def classify(
     p_value: float | None,
     priority_share: float | None,
     arrival_share: float | None,
+    tau_send: float | None = None,
+    p_send: float | None = None,
 ) -> str:
-    """Apply the pre-registered decision rule from docs/METHODOLOGY.md."""
+    """Apply the pre-registered decision rule from docs/METHODOLOGY.md.
+
+    ``tau`` and ``p_value`` are fee versus block index. The arrival test uses
+    send index versus block index when given. On a lowest-fee-first ladder the
+    two are the same statistic, which is exactly the pre-registered rule.
+    """
     if n < 5 or tau is None or p_value is None:
         return "inconclusive"
     if math.isclose(tau, -1.0):
         return "strict_priority"
     if tau <= -0.6 and p_value <= 0.05 and (priority_share or 0) > 0.5:
         return "priority"
-    if tau >= 0.6 and p_value <= 0.05 and (arrival_share or 0) > 0.5:
+    arrival_tau = tau if tau_send is None else tau_send
+    arrival_p = p_value if p_send is None else p_send
+    if (
+        arrival_tau is not None
+        and arrival_p is not None
+        and arrival_tau >= 0.6
+        and arrival_p <= 0.05
+        and (arrival_share or 0) > 0.5
+    ):
         return "arrival"
     return "no_rule_detected"
+
+
+def rollup(calls: list[str]) -> str:
+    """Validator call for one ladder type from its slot calls (methodology §9.3)."""
+    if not calls:
+        return "inconclusive"
+    labels = set(calls)
+    if labels == {"strict_priority"}:
+        return "strict_priority"
+    if labels <= {"strict_priority", "priority"}:
+        return "priority"
+    if labels == {"arrival"}:
+        return "arrival"
+    if labels == {"no_rule_detected"}:
+        return "no_rule_detected"
+    return "mixed_across_slots"
 
 
 def _validator_map(run_dir: Path) -> dict[str, dict]:
@@ -134,6 +283,16 @@ def analyze_run(run_dir: Path) -> tuple[list[dict], list[dict], list[dict]]:
     ]
     contexts = {row["slot"]: row for row in read_jsonl(run_dir / "block_context.jsonl")}
     validators = _validator_map(run_dir)
+    attempts = {
+        row["signature"]: row
+        for row in read_jsonl(run_dir / "attempts.jsonl")
+        if row.get("signature")
+    }
+    ours = {
+        row["signature"]
+        for row in read_jsonl(run_dir / "block_observations.jsonl")
+        if row.get("signature")
+    } | set(attempts)
     groups: dict[tuple, list[dict]] = defaultdict(list)
     for row in observations:
         groups[(row["identity"], row["ladder"], row["slot"])].append(row)
@@ -144,15 +303,34 @@ def analyze_run(run_dir: Path) -> tuple[list[dict], list[dict], list[dict]]:
     for (identity, ladder, slot), rows in sorted(groups.items()):
         rows.sort(key=lambda row: row["send_index"])
         fees = [row["priority_fee_lamports"] for row in rows]
+        sends = [row["send_index"] for row in rows]
         indexes = [row["block_index"] for row in rows]
         if len(fees) != len(set(fees)):
             raise ValueError(f"{run_dir.name}/{identity}/{ladder}: duplicate fee rung")
         tau = kendall_tau_b(fees, indexes)
         p_value = exact_directional_p_value(fees, indexes)
+        tau_send = kendall_tau_b(sends, indexes)
+        p_send = exact_directional_p_value(sends, indexes)
         priority, arrival, pairs = pair_counts(rows)
         priority_share = priority / pairs if pairs else None
         arrival_share = arrival / pairs if pairs else None
         validator = validators[identity]
+        targets = {attempts[row["signature"]]["target_slot"] for row in rows}
+        if len(targets) != 1:
+            raise ValueError(f"{run_dir.name}/{identity}/{ladder}: rungs disagree on target slot")
+        target_slot = targets.pop()
+        block = load_raw_block(run_dir, slot)
+        checks = (
+            raw_block_checks(block, ladder, rows, ours)
+            if block is not None
+            else {
+                "block_leader": None,
+                "raw_tx_count": None,
+                "ladder_writable_accounts": None,
+                "foreign_writers": None,
+                "contaminated": None,
+            }
+        )
         record = {
             "run": run_dir.name,
             "identity": identity,
@@ -169,14 +347,28 @@ def analyze_run(run_dir: Path) -> tuple[list[dict], list[dict], list[dict]]:
             "priority_pair_share": priority_share,
             "arrival_pair_share": arrival_share,
             "call": classify(
-                len(rows), tau, p_value, priority_share, arrival_share
+                len(rows), tau, p_value, priority_share, arrival_share, tau_send, p_send
             ),
+            "send_order": send_order_label(fees, sends),
+            "tau_fee_send": kendall_tau_b(fees, sends),
+            "tau_send_b": tau_send,
+            "target_slot": target_slot,
+            "slot_minus_target": slot - target_slot,
+            "block_leader": checks["block_leader"],
+            "leader_matches": (
+                None if checks["block_leader"] is None else checks["block_leader"] == identity
+            ),
+            "ladder_writable_accounts": checks["ladder_writable_accounts"],
+            "foreign_writers": checks["foreign_writers"],
+            "contaminated": checks["contaminated"],
         }
         statistics.append(record)
 
         context = contexts.get(slot)
         if context is None:
             raise ValueError(f"{run_dir.name}: missing block_context for slot {slot}")
+        if checks["raw_tx_count"] is not None and checks["raw_tx_count"] != context["tx_count"]:
+            raise ValueError(f"{run_dir.name}: raw block {slot} tx count disagrees with block_context")
         context_by_signature = {
             tx["signature"]: tx for tx in context["transactions"]
         }
@@ -199,9 +391,9 @@ def analyze_run(run_dir: Path) -> tuple[list[dict], list[dict], list[dict]]:
                     "priority_fee_lamports": row["priority_fee_lamports"],
                     "send_index": row["send_index"],
                     "block_index": row["block_index"],
-                    "explorer_url": (
-                        f"https://explorer.solana.com/tx/{row['signature']}?cluster=mainnet"
-                    ),
+                    "explorer_url": EXPLORER_TX.format(row["signature"]),
+                    "solscan_url": SOLSCAN_TX.format(row["signature"]),
+                    "block_url": SOLSCAN_BLOCK.format(slot),
                 }
             )
 
@@ -316,6 +508,101 @@ def cross_run_consistency(statistics: list[dict]) -> list[dict]:
     return output
 
 
+def validator_rollups(statistics: list[dict]) -> list[dict]:
+    """Headline (uncontaminated) and inclusive validator calls per ladder type."""
+    grouped: dict[tuple, list[dict]] = defaultdict(list)
+    for row in statistics:
+        grouped[(row["identity"], row["client"], row["version"], row["ladder"])].append(row)
+    output = []
+    for (identity, client, version, ladder), rows in sorted(grouped.items()):
+        rows.sort(key=lambda row: row["run"])
+        powered = [row for row in rows if row["call"] != "inconclusive"]
+        output.append(
+            {
+                "identity": identity,
+                "client": client,
+                "version": version,
+                "ladder": ladder,
+                "slot_calls": [row["call"] for row in rows],
+                "headline_call": rollup(
+                    [row["call"] for row in powered if row["contaminated"] is not True]
+                ),
+                "inclusive_call": rollup([row["call"] for row in powered]),
+                "contaminated_slots": sum(row["contaminated"] is True for row in rows),
+                "inconclusive_slots": len(rows) - len(powered),
+            }
+        )
+    return output
+
+
+def claim_anchor(run: str, client: str, ladder: str) -> str:
+    return f"{run}-{client}-{ladder}".lower()
+
+
+def _fmt(value, digits: int = 3) -> str:
+    if value is None:
+        return "n/a"
+    if isinstance(value, float):
+        return f"{value:+.{digits}f}" if digits == 3 else f"{value:.{digits}f}"
+    return str(value)
+
+
+def evidence_markdown(statistics: list[dict], evidence: list[dict]) -> str:
+    """One section per claim, every rung linked to Solscan and Explorer."""
+    by_claim: dict[str, list[dict]] = defaultdict(list)
+    for row in evidence:
+        by_claim[row["claim_id"]].append(row)
+    lines = [
+        "# Evidence index",
+        "",
+        "Generated by `python -m analysis` from `data/runs/`. Do not edit by hand.",
+        "",
+        "One section per validator-run ladder. Every probe that entered a statistic is listed",
+        "with its signature, the slot it landed in, its block index (zero-based position in",
+        "`getBlock().transactions`, votes included), its priority fee, and its send index",
+        "(0 = first stream written). The block leader is the `Fee` reward recipient in the",
+        "stored raw block `data/runs/<run>/blocks/<slot>.json.gz`.",
+        "",
+    ]
+    for stat in sorted(statistics, key=lambda r: (r["run"], r["client"], r["ladder"])):
+        claim_id = f"{stat['run']}:{stat['identity']}:{stat['ladder']}"
+        anchor = claim_anchor(stat["run"], stat["client"], stat["ladder"])
+        slot = stat["slot"]
+        lines += [
+            f'<a id="{anchor}"></a>',
+            "",
+            f"## {stat['run']} · {stat['client']} {stat['version']} · {stat['ladder']}",
+            "",
+            f"- Leader identity: `{stat['identity']}`; block leader from rewards: "
+            f"`{stat['block_leader'] or 'n/a'}`",
+            f"- Slot: [{slot}]({SOLSCAN_BLOCK.format(slot)}) "
+            f"([Explorer]({EXPLORER_BLOCK.format(slot)})); target slot {stat['target_slot']} "
+            f"(landed {stat['slot_minus_target']:+d})",
+            f"- n = {stat['n']}, tau-b(fee, block index) = {_fmt(stat['tau_b'])}, "
+            f"exact one-sided p = {_fmt(stat['exact_p_value'], 6)}, call `{stat['call']}`",
+            f"- Send order: {stat['send_order']} (tau-b(fee, send index) = "
+            f"{_fmt(stat['tau_fee_send'])})",
+            f"- Writable accounts this ladder locks: "
+            + (
+                ", ".join(f"`{key}`" for key in stat["ladder_writable_accounts"])
+                if stat["ladder_writable_accounts"]
+                else "n/a"
+            )
+            + f"; foreign transactions writing them: {_fmt(stat['foreign_writers'])}",
+            "",
+            "| send index | priority fee (lamports) | block index | signature |",
+            "| ---: | ---: | ---: | --- |",
+        ]
+        for row in sorted(by_claim[claim_id], key=lambda r: r["send_index"]):
+            sig = row["signature"]
+            lines.append(
+                f"| {row['send_index']} | {row['priority_fee_lamports']} | {row['block_index']} | "
+                f"[`{sig[:16]}…`]({SOLSCAN_TX.format(sig)}) ([Explorer]({EXPLORER_TX.format(sig)})) |"
+            )
+        lines.append("")
+    return "\n".join(lines)
+
+
 def position_summary(positions: list[dict]) -> list[dict]:
     output = []
     for ladder in ("all", *LADDERS):
@@ -389,6 +676,7 @@ def write_outputs(
 
     pooled = pooled_pair_shares(statistics, seed=seed, replicates=replicates)
     consistency = cross_run_consistency(statistics)
+    rollups = validator_rollups(statistics)
     position_rollup = position_summary(positions)
     result = {
         "inputs": [run_dir.name for run_dir in run_dirs],
@@ -401,11 +689,14 @@ def write_outputs(
         "ladder_statistics": statistics,
         "pooled_pair_shares": pooled,
         "cross_run_consistency": consistency,
+        "validator_rollups": rollups,
         "block_position_summary": position_rollup,
     }
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "analysis.json").write_text(json.dumps(result, indent=2) + "\n")
+    (output_dir / "EVIDENCE.md").write_text(evidence_markdown(statistics, evidence))
     _write_csv(output_dir / "ladder_statistics.csv", statistics, OUTPUT_FIELDS)
+    _write_csv(output_dir / "validator_rollups.csv", rollups, ROLLUP_FIELDS)
     _write_csv(output_dir / "pooled_pair_shares.csv", pooled)
     _write_csv(output_dir / "cross_run_consistency.csv", consistency)
     _write_csv(output_dir / "block_positions.csv", positions)
