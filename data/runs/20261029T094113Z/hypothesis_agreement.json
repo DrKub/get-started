@@ -1,0 +1,372 @@
+{
+  "hypotheses": [
+    {
+      "agree": 123,
+      "hypothesis": "cu_price",
+      "pairs": 180,
+      "rank_field": "rank_cu_price",
+      "rate": 0.6833333333333333,
+      "statement": "Higher compute-unit price is included earlier. Equal prices break by ascending send index.",
+      "ties": 0
+    },
+    {
+      "agree": 123,
+      "hypothesis": "cu_price",
+      "pairs": 180,
+      "rank_field": "rank_arm_cu_price",
+      "rate": 0.6833333333333333,
+      "statement": "Higher compute-unit price is included earlier. Equal prices break by ascending send index.",
+      "ties": 0
+    },
+    {
+      "agree": 123,
+      "hypothesis": "priority_fee",
+      "pairs": 180,
+      "rank_field": "rank_priority_fee",
+      "rate": 0.6833333333333333,
+      "statement": "Higher total prioritization fee is included earlier. Equal fees break by ascending send index.",
+      "ties": 0
+    },
+    {
+      "agree": 123,
+      "hypothesis": "priority_fee",
+      "pairs": 180,
+      "rank_field": "rank_arm_priority_fee",
+      "rate": 0.6833333333333333,
+      "statement": "Higher total prioritization fee is included earlier. Equal fees break by ascending send index.",
+      "ties": 0
+    },
+    {
+      "agree": 57,
+      "hypothesis": "send_order",
+      "pairs": 180,
+      "rank_field": "rank_send_order",
+      "rate": 0.31666666666666665,
+      "statement": "Earlier send index is included earlier.",
+      "ties": 0
+    },
+    {
+      "agree": 57,
+      "hypothesis": "send_order",
+      "pairs": 180,
+      "rank_field": "rank_arm_send_order",
+      "rate": 0.31666666666666665,
+      "statement": "Earlier send index is included earlier.",
+      "ties": 0
+    }
+  ],
+  "ladders": [
+    {
+      "block_indexes": [
+        15,
+        14,
+        13,
+        12,
+        11,
+        10
+      ],
+      "call": "strict_priority",
+      "fees": [
+        0,
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "identity": "7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE",
+      "ladder": "conflict",
+      "n": 6,
+      "p_perm": 0.001388888888888889,
+      "priority_pairwise": 1.0,
+      "send_pairwise": 0.0,
+      "tau_fee_block_index": -1.0
+    },
+    {
+      "block_indexes": [
+        108,
+        109,
+        110,
+        112,
+        113,
+        114
+      ],
+      "call": "arrival",
+      "fees": [
+        0,
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "identity": "7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE",
+      "ladder": "nonconflict",
+      "n": 6,
+      "p_perm": 0.001388888888888889,
+      "priority_pairwise": 0.0,
+      "send_pairwise": 1.0,
+      "tau_fee_block_index": 1.0
+    },
+    {
+      "block_indexes": [
+        28,
+        26,
+        25,
+        24,
+        23,
+        15
+      ],
+      "call": "strict_priority",
+      "fees": [
+        0,
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "identity": "9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY",
+      "ladder": "conflict",
+      "n": 6,
+      "p_perm": 0.001388888888888889,
+      "priority_pairwise": 1.0,
+      "send_pairwise": 0.0,
+      "tau_fee_block_index": -1.0
+    },
+    {
+      "block_indexes": [
+        174,
+        173,
+        172,
+        171,
+        170,
+        169
+      ],
+      "call": "strict_priority",
+      "fees": [
+        0,
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "identity": "9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY",
+      "ladder": "nonconflict",
+      "n": 6,
+      "p_perm": 0.001388888888888889,
+      "priority_pairwise": 1.0,
+      "send_pairwise": 0.0,
+      "tau_fee_block_index": -1.0
+    },
+    {
+      "block_indexes": [
+        50,
+        49,
+        46,
+        43,
+        42,
+        40
+      ],
+      "call": "strict_priority",
+      "fees": [
+        0,
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "identity": "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy",
+      "ladder": "conflict",
+      "n": 6,
+      "p_perm": 0.001388888888888889,
+      "priority_pairwise": 1.0,
+      "send_pairwise": 0.0,
+      "tau_fee_block_index": -1.0
+    },
+    {
+      "block_indexes": [
+        52,
+        53,
+        48,
+        50,
+        51,
+        46
+      ],
+      "call": "no_rule_detected",
+      "fees": [
+        0,
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "identity": "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy",
+      "ladder": "nonconflict",
+      "n": 6,
+      "p_perm": 0.1361111111111111,
+      "priority_pairwise": 0.7333333333333333,
+      "send_pairwise": 0.26666666666666666,
+      "tau_fee_block_index": -0.4666666666666667
+    },
+    {
+      "block_indexes": [
+        137,
+        128,
+        135,
+        138,
+        132,
+        130
+      ],
+      "call": "no_rule_detected",
+      "fees": [
+        0,
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "identity": "Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk",
+      "ladder": "conflict",
+      "n": 6,
+      "p_perm": 0.3597222222222222,
+      "priority_pairwise": 0.6,
+      "send_pairwise": 0.4,
+      "tau_fee_block_index": -0.2
+    },
+    {
+      "block_indexes": [
+        13,
+        16,
+        22,
+        47,
+        28,
+        14
+      ],
+      "call": "no_rule_detected",
+      "fees": [
+        0,
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "identity": "Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk",
+      "ladder": "nonconflict",
+      "n": 6,
+      "p_perm": 0.23472222222222222,
+      "priority_pairwise": 0.3333333333333333,
+      "send_pairwise": 0.6666666666666666,
+      "tau_fee_block_index": 0.3333333333333333
+    },
+    {
+      "block_indexes": [
+        10,
+        9,
+        8,
+        7,
+        6,
+        5
+      ],
+      "call": "strict_priority",
+      "fees": [
+        0,
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "identity": "HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU",
+      "ladder": "conflict",
+      "n": 6,
+      "p_perm": 0.001388888888888889,
+      "priority_pairwise": 1.0,
+      "send_pairwise": 0.0,
+      "tau_fee_block_index": -1.0
+    },
+    {
+      "block_indexes": [
+        123,
+        127,
+        125,
+        126,
+        124,
+        128
+      ],
+      "call": "no_rule_detected",
+      "fees": [
+        0,
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "identity": "HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU",
+      "ladder": "nonconflict",
+      "n": 6,
+      "p_perm": 0.23472222222222222,
+      "priority_pairwise": 0.3333333333333333,
+      "send_pairwise": 0.6666666666666666,
+      "tau_fee_block_index": 0.3333333333333333
+    },
+    {
+      "block_indexes": [
+        71,
+        67,
+        60,
+        66,
+        58,
+        59
+      ],
+      "call": "priority",
+      "fees": [
+        0,
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "identity": "JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b",
+      "ladder": "conflict",
+      "n": 6,
+      "p_perm": 0.027777777777777776,
+      "priority_pairwise": 0.8666666666666667,
+      "send_pairwise": 0.13333333333333333,
+      "tau_fee_block_index": -0.7333333333333333
+    },
+    {
+      "block_indexes": [
+        44,
+        40,
+        49,
+        46,
+        41,
+        51
+      ],
+      "call": "no_rule_detected",
+      "fees": [
+        0,
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "identity": "JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b",
+      "ladder": "nonconflict",
+      "n": 6,
+      "p_perm": 0.23472222222222222,
+      "priority_pairwise": 0.3333333333333333,
+      "send_pairwise": 0.6666666666666666,
+      "tau_fee_block_index": 0.3333333333333333
+    }
+  ]
+}

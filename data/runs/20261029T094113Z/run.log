@@ -1,0 +1,14 @@
+LIVE
+experiment: e1071-20261029T094113Z
+source: rpc
+alpenglow regime: after (ok=True)
+planned fee: 0.000420372 SOL (420372 lamports) / cap 0.011000000 SOL
+targets: 6 families: firedancer, jito-solana, agave, harmonic-firedancer, harmonic-agave, agave-bam
+  9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY  Firedancer 26.10.4  tpu@462835056
+  HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU  JitoLabs 4.3.2  tpu@462834404
+  7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE  Agave 4.3.2  tpu@462834648
+  JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b  HarmonicFiredancer 26.10.4  tpu@462834396
+  Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk  HarmonicAgave 4.3.2  tpu@462834368
+  DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy  AgaveBam 4.4.0-rc.1  tpu@462834376
+planned transactions: 84
+signed: 84  sent: 84
