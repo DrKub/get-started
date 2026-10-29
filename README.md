@@ -4,143 +4,185 @@ Measurement project for the Superteam Earn bounty [Inside the Block: How Solana 
 
 **By what rule does this leader order transactions inside the block it produces, how strictly does that rule hold, and is there a rule at all?**
 
-The primary evidence is transactions this project sends into that leader's window. Other transactions in the same block are supplementary. Jito bundles and tips are out of scope. Every measurement used in the report is from Solana mainnet after the Alpenglow consensus handoff (slot 459,653,000, 21 October 2026). Localnet and devnet exist only so the pipeline can be built without spending SOL, and those runs are excluded from the report.
+The primary evidence is transactions this project sent into each leader's window. Other transactions in the same block are supplementary. Jito bundles and tips are out of scope. Every measurement in the report is from Solana mainnet after the Alpenglow consensus handoff (slot 459,653,000, 21 October 2026). The planner refuses earlier slots.
 
-This repository's design and write-up live in `README.md` and `docs/`. The sending pipeline, `docker-compose.yml`, and `data/` are a separate component. Where this document names a flag, service, or path that the pipeline owns, it is marked `<!-- TODO: sync with measure/ -->`.
+**Results:** [REPORT.md](REPORT.md). It covers two live runs, 6 validators across 6 client labels and 3 client families, 24 ladders, 132 of our own probe transactions, and 0.0086 SOL. Every claim links to signatures and slots in [analysis/output/EVIDENCE.md](analysis/output/EVIDENCE.md).
 
-## Why this design
+## Layout
 
-Agave's open-source scheduler does **not** publish a pure sort by compute-unit price. Since Agave v2.3 the default block-production method is `central-scheduler-greedy`. That scheduler pops a priority queue and schedules a transaction when its account locks can be taken immediately. The priority score is the leader's fee reward divided by the cost-model cost. The older prio-graph scheduler, which chains conflicting transactions, is no longer a supported `--block-production-method` as of Agave 4.1. Firedancer's pack tile ranks by reward over estimated compute and then paces block fill according to a `schedule_strategy` operators set themselves. Jito-Solana adds a separate bundle stage on top of a fork of this banking path.
+| Path | Contents |
+| --- | --- |
+| `measure/` | Live pipeline: leader selection, ladder planning, signing, QUIC send, collection, fee ledger, rent sweep. [Design notes](measure/DESIGN_NOTES.md). |
+| `analysis/` | Offline, standard library only. It reads `data/runs/`, computes tau-b, exact p-values, the bootstrap, raw-block checks, and writes `analysis/output/`. [README](analysis/README.md). |
+| `viz/` | Offline figures from `analysis/output/` to `figures/`. |
+| `data/runs/<run>/` | Committed raw evidence from the two mainnet runs (see [Raw data](#raw-data)). |
+| `docs/METHODOLOGY.md` | Scheduler background, design, pre-registered decision rule, limits. |
+| `docs/SUBMISSION_CHECKLIST.md` | Bounty requirements and judging weights mapped to files. |
+| `REPORT.md` | Results, figures, cost, what went wrong. |
 
-A block index is the order transactions were recorded into the ledger. That order equals the scheduler's rank only under conditions the scheduler actually guarantees. The experiment is built around those conditions:
+## Reproduce the report from committed data
 
-- A **conflict ladder** (every probe transaction writes the same accounts, only the fee changes, and they are sent in reverse priority order) tests the rule the scheduler claims to enforce: among transactions that conflict, higher priority runs first. On this ladder, "sorted by priority" and "sorted by send order" predict opposite rankings.
-- A **non-conflict ladder** (disjoint writable accounts, same fee shape) tests whether ledger order is also a global priority sort. Agave's greedy scheduler does not promise that. A pack-style scheduler might.
-- Probes are sent in one burst, aimed at the leader's own TPU, so the ladder is co-present in the buffer before the leader starts draining it. The lowest fee is transmitted first and the highest fee last. Kendall tau-b between fee and block index is then negative when the block followed the fee (higher fee, earlier index) and positive when the block followed send order.
-- The call for each slot is pre-registered in [docs/METHODOLOGY.md](docs/METHODOLOGY.md). `strict_priority` requires tau-b = −1. A weaker `priority` call requires tau-b ≤ −0.6 and a permutation p-value ≤ 0.05. "No rule detected" and "inconclusive" are the required labels when the ranking does not clear that bar.
+No network, no key, no transaction:
 
-The full treatment of each judging consideration is below and, in more detail, in the methodology.
+```bash
+pip install -r viz/requirements.txt        # matplotlib, numpy, pillow; analysis needs nothing
+python -m analysis && python -m viz
+git diff --exit-code analysis/output figures   # byte-identical to the committed outputs
+```
 
-## Quickstart
+The same thing in a container with networking disabled (`network_mode: none`):
 
-Dry-run is the default. `docker compose up` reads the leader schedule, selects validators, builds and signs the ladders, checks the spend cap, and writes the plan under `data/`. It does not submit transactions.
+```bash
+docker compose --profile report run --rm report
+```
 
-<!-- TODO: sync with measure/ -->
+CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs every test, both reproductions with the diff check, an offline dry-run, and a key-material scan over the full git history.
+
+## Run the pipeline
+
+### Dry-run (default)
 
 ```bash
 docker compose up --build
 ```
 
-<!-- TODO: sync with measure/ -->
+`MODE` defaults to `dry-run`. The container reads the cluster from mainnet RPC, selects validators, builds and signs both ladders in memory, checks the spend cap, prints the plan, and writes it under `data/dry-runs/<timestamp>/`. It submits nothing. Without a mounted key it signs with an ephemeral keypair. Dry-run output is gitignored and the analysis never reads it.
 
-Live sending is the same command with an explicit mode and a funded key mounted from the host. The process refuses to start a live run without `MODE=live`, and it refuses any cap above 0.05 SOL.
+The same thing without Docker:
 
-<!-- TODO: sync with measure/ -->
+```bash
+pip install -r measure/requirements.txt
+python -m measure run                                  # dry-run against mainnet RPC (read-only)
+python -m measure run --fixture-dir measure/tests/fixtures/offline --min-lead-slots 16   # fully offline
+```
+
+### Live
 
 ```bash
 MODE=live \
-SPEND_CAP_SOL=0.05 \
 KEYPAIR_PATH=/absolute/path/to/id.json \
-RPC_URL="https://your-mainnet-rpc" \
+RPC_URL="https://your-keyed-mainnet-rpc" \
+SPEND_CAP_SOL=0.01 \
 docker compose up --build
 ```
 
-<!-- TODO: sync with measure/ -->
+`MODE=live` is the same switch as `python -m measure run --live`. Live is opt-in: any other value, or none, stays on dry-run. The keypair is bind-mounted read-only at `/keys/id.json`. It is never copied into an image (`.dockerignore` excludes `.env`, `data/`, and keys), and it is never logged. RPC query strings are stripped from logs and manifests.
 
-### Keys and environment
+A live run:
 
-| Name | Required | Role |
+1. funds one fresh payer per non-conflict rung (6 by default);
+2. waits for the funding to land;
+3. sends each ladder as one QUIC burst to the target leader's TPU one slot before its planned slot;
+4. collects `getBlock` for the landed slots (`COLLECT=1` is the Compose default; `--collect` on the CLI);
+5. reconciles the ledger to on-chain `meta.fee`;
+6. sweeps the payer accounts back to the funder.
+
+### Environment
+
+All variables are read by `measure/config.py`. Compose passes each one through with the default shown.
+
+| Name | Default | Role |
 | --- | --- | --- |
-| `MODE` | no | `dry-run` (default) or `live`. Anything absent or unrecognised stays on dry-run. |
-| `SPEND_CAP_SOL` | no | Default and hard maximum `0.05`. The process counts base fee plus priority fee of every signed transaction, persists the running total under `data/`, and will not sign a transaction that would cross the cap. A value above `0.05` is a startup error. |
-| `KEYPAIR_PATH` | live only | Host path to the payer keypair. Compose mounts it read-only at `/keys/id.json` inside the container. The file is never copied into the image or the repo. Dry-run generates an ephemeral key if this path is unset. |
-| `RPC_URL` | yes, for a real schedule | Mainnet RPC used for `getLeaderSchedule`, `getClusterNodes`, `getEpochInfo`, `getBlock`, and (when the RPC exposes it) `getAgGenesisCert`. A URL that embeds an API key stays in the environment, not in the repo. |
-| `VALIDATORS_APP_TOKEN` | no | Optional token for `validators.app`, which supplies `software_client`, `software_version`, and `active_stake`. Without it the run falls back to RPC version strings and stake from `getVoteAccounts`, and records the weaker classification. |
+| `MODE` | `dry-run` | `live` sends. Anything else is a dry-run. |
+| `RPC_URL` | `https://api.mainnet-beta.solana.com` | JSON-RPC for `getSlotLeaders`, `getClusterNodes`, `getVoteAccounts`, `getEpochInfo`, `getLatestBlockhash`, `getSignatureStatuses`, `getTransaction`, `getBlock`. The public endpoint rate-limits collection; use a keyed URL for a live run. |
+| `WS_URL` | derived from `RPC_URL` | `slotSubscribe` for the slot clock. |
+| `SPEND_CAP_SOL` | `0.05` | Fee cap. Values above the hard cap of 0.05 SOL are a startup error. |
+| `KEYPAIR_PATH` | unset | Host path to a Solana CLI `id.json`, mounted read-only. Required for live. |
+| `VALIDATORS_APP_TOKEN` | unset | Optional. When set, validators.app `software_client` replaces RPC `clientId`. Both runs used `clientId`. |
+| `LOOKAHEAD_SLOTS` | `16000` | How far ahead to scan the leader schedule. |
+| `MIN_LEAD_SLOTS` | `150` | Minimum distance from now to a planned slot. Use `16` with the offline fixture. |
+| `TARGET_VALIDATORS` | `6` | Leaders to select. |
+| `MIN_CLIENT_FAMILIES` | `3` | Selection fails unless this many families (Agave, Jito, Firedancer) are covered. |
+| `TPU_COPIES` | `1` | Copies of each burst written to the leader's TPU. Run 3 used 2; see the report. |
+| `SEND_ORDER` | `ascending` | `ascending` (lowest fee first, as in both runs), `descending`, or `shuffled`. See [the collinearity limit](#the-main-limit-fee-order-and-send-order-are-collinear). |
+| `SEND_ORDER_SEED` | CRC32 of the run id | Seed for `shuffled`. Recorded in the manifest. |
+| `LADDERS` | `both` | `both`, or `conflict` (no payers to fund, no rent at risk). |
+| `COLLECT` | `1` in Compose, off on the CLI | Fetch `getBlock` after a live send. |
+| `DATA_DIR` | `data` (`/data` in Compose) | Output root. |
 
-<!-- TODO: sync with measure/ -->
+Copy [`.env.example`](.env.example) to `.env` to set these; `.env` is gitignored.
 
-Assumed compose shape, owned by the pipeline:
+### Other commands
 
-<!-- TODO: sync with measure/ -->
+```bash
+python -m measure key                                   # funder pubkey and balance; sends nothing
+python -m measure ledger show                           # global fee ledger, data/spend.json
+python -m measure ledger reconcile --rpc                # set the ledger to on-chain meta.fee
+python -m measure ledger reset --yes
+python -m measure collect --from-sent data/runs/<run>/attempts.jsonl   # getBlock for a previous live send
+python -m measure sweep                                  # return every data/keys/<run>/ payer's lamports to the funder
+python -m measure parse-block --file block.json --slot <slot>
+python -m analysis.fetch_blocks                          # read-only: store getBlock bodies for the measured slots
+```
 
-- Service name `measure`, build context `./measure`.
-- Volume `${KEYPAIR_PATH}:/keys/id.json:ro` when `KEYPAIR_PATH` is set.
-- Volume `./data:/data` for the run manifest, JSONL attempt log, raw `getBlock` bodies, and the spend ledger.
-- No key, RPC credential, or validators.app token in a `COPY`, a committed `.env`, or a log line.
+## Design
 
-Do not commit `id.json`, `.env`, or `data/`. The pipeline's ignore rules have to enforce that; this document cannot by itself.
+### Probes
 
-### What you should see
+Every probe is a one-signature, 1,000-CU-limit transaction carrying a one-lamport self-transfer. Only the priority fee changes: 0, 1, 2, 4, 8, 16 lamports on top of the 5,000-lamport base fee. That isolates the fee term in Agave's `P = R / (1 + C)` and Firedancer's reward/compute.
 
-Dry-run prints the selected identities, the client label and version recorded for each, the upcoming leader slots, the ladder (compute-unit price, fee in lamports, send index), and the projected spend. Projected spend for the default ladders is far below 0.05 SOL; the cap is what stops a bug or a retry loop.
+- **Conflict ladder.** Each rung is a self-transfer from the funder, so every probe write-locks the same account and the scheduler must serialize them. No account is created.
+- **Non-conflict ladder.** Each rung has its own fresh payer, which self-transfers, so no two probes share a writable account. Payers are funded with rent-exempt principal before the burst. Their keys are written to `data/keys/<run>/` (mode 0600, gitignored), and the lamports are swept back after the run.
 
-<!-- TODO: sync with measure/ -->
+Each ladder goes to one leader in one burst, aimed at that leader's QUIC TPU (`getClusterNodes`). The conflict ladder targets the first slot of the leader's four-slot window and the non-conflict ladder the third. No RPC is in the submit path. The run records the endpoint, send index, send timestamp, and target slot of every signature.
 
-Live mode adds a signature per submitted transaction and, after the window, the slot and block index of each signature that landed. Those fields are the ones a judge re-checks with `getBlock`.
+### Leader schedule and selection
 
-## How the design handles the required considerations
+`getSlotLeaders` gives the schedule from the current slot forward. Each leader is labelled with `clientId` from `getClusterNodes` (Agave, JitoLabs, AgaveBam, HarmonicAgave, Firedancer, HarmonicFiredancer). The selector picks round-robin across labels, preferring identities with more upcoming windows, then earlier ones. It stops at `TARGET_VALIDATORS` and fails unless `MIN_CLIENT_FAMILIES` families are covered. It also swaps in one identity outside the ten largest by stake when one is scheduled. The block's `Fee` reward recipient confirms afterwards that the intended leader produced the slot. It matched in all 24 measured slots.
 
-The methodology is the source of truth for definitions, formulas, and the pre-registered decision rule. This section is the map the bounty asks the README to carry.
+### Statistic and decision rule
 
-### Leader schedule and leader types
+For each ladder, Kendall tau-b is computed between fee and block index over our landed probes only. A negative tau means higher fee earlier. The calls are pre-registered in [docs/METHODOLOGY.md](docs/METHODOLOGY.md):
 
-The leader schedule is stake-weighted, recomputed once per epoch, and assigns four consecutive slots to each selected leader. At a 200 ms slot time that window is about 800 ms of wall clock. The run calls `getLeaderSchedule`, converts relative indexes with the epoch start slot, and submits only into windows whose identity is the validator under test.
+| Call | Condition |
+| --- | --- |
+| `inconclusive` | fewer than 5 landed probes |
+| `strict_priority` | tau-b = −1 |
+| `priority` | tau-b ≤ −0.6, fee-pair share > 0.5, exact one-sided p ≤ 0.05 |
+| `arrival` | the same thresholds against send order |
+| `no_rule_detected` | anything else |
 
-"Leader type" here is the tuple recorded at selection time: identity, `software_client`, `software_version`, active stake, the validators.app `jito` flag, and whether the node is delinquent. The six validators must cover at least three distinct client or fork versions. Vanilla Agave, Jito-Solana, and Firedancer are different types. So are labels such as Harmonic or BAM when `software_client` says so. Stake is recorded because a large leader and a small one differ in hardware, order flow, and how much unstaked QUIC capacity they have, which changes whether our transactions arrive, not necessarily how they are ordered once buffered.
-
-A transaction that lands in some other leader's slot is logged and excluded from that validator's rule call. Skipped slots are logged and are not treated as empty blocks.
-
-### Path from this process to the executing leader
-
-The planned path is a direct QUIC connection to the target leader's advertised TPU (`getClusterNodes`), opened before the burst. The Agave TPU buffers packets when the node is close to becoming leader, then the banking stage drains that buffer. Sigverify can drop packets on a published priority floor before they ever reach the scheduler. On a Jito validator the gossip TPU address may be a relayer rather than the validator process itself.
-
-The run records the endpoint it dialed, the send timestamp, and the slot it was aiming at. It does not use a public RPC as the submit path: an RPC is an extra hop that can delay, retry, or reorder, and non-vote forwarding is not guaranteed on the way to the next leader. Landing rate is reported separately from order. A ladder that never lands supports an admission or path conclusion, not an ordering conclusion.
-
-### Interaction of our own transactions
-
-The conflict ladder shares one fee payer and one recipient, so the transactions lock the same writable accounts and the scheduler has to serialize them. The non-conflict ladder uses distinct payers and recipients, so they do not lock each other. Both ladders freeze every other byte that affects cost: one signature, the same compute-unit limit, a one-lamport transfer. Only the priority fee changes. That isolates the fee term in `priority = reward / cost`. The two ladders answer different questions and are never pooled into one tau.
+Pooled shares use a cluster bootstrap over whole ladders (10,000 replicates, seed 20261029). Validator rollups report `mixed_across_slots` when a validator's two runs disagree; taus are never averaged into a call.
 
 ### Competition inside the block
 
-Foreign transactions can sit between ours, take compute budget, or lock an account we also lock. Kendall tau-b is computed on **our** landed signatures only, so a foreign transaction placed between two probes does not by itself change the statistic. The raw block is still saved. Each attempt records the gap to the next probe, the number of non-vote transactions in the slot, and whether any foreign transaction wrote an account on our conflict ladder. That last case flags the slot `contaminated`. The headline validator call drops contaminated slots. The report also shows the call with them included, so competition that actually reorders the ladder stays visible.
+Tau is computed on our signatures, so a foreign transaction between two probes does not by itself change it. The analysis re-derives every block index from the stored raw block. It also counts foreign transactions that write any account our ladder locks; a ladder with any such writer would be flagged `contaminated`. The count was zero in all 24 ladders.
 
-### Send order
+### The main limit: fee order and send order are collinear
 
-Each ladder is submitted in a single burst, lowest fee first and highest fee last. Block index 0 is the first transaction in the block. Tau-b between fee and block index is −1 when every higher fee sits earlier, and +1 when the block reproduces send order. Fee and send index increase together, so the two taus share a sign. They are reported side by side and are not treated as independent evidence. The permutation and the send index of every signature are in the raw log.
+Both runs sent every ladder lowest fee first, and all rungs of a burst share one millisecond send timestamp. Fee rank and send rank are therefore the same ranking. Arrival at the leader is not observed. "Ordered by fee" (tau −1) and "ordered by arrival" (tau +1) are distinguishable only by direction. Any mechanism that drains a burst last-in-first-out predicts exactly what a fee sort predicts. The report states every `strict_priority` call with this caveat.
 
-### Noise versus a rule
-
-Small ladders move tau a lot when a single pair flips. The decision rule is fixed before looking at mainnet results: a slot with fewer than five landed probes is inconclusive; `strict_priority` requires tau-b = −1; `priority` requires tau-b ≤ −0.6, `priority_pairwise` > 0.5, and a one-sided permutation p-value ≤ 0.05; the same thresholds with the sign flipped are `arrival`. Everything else in a powered slot is `no_rule_detected`. Validator-level language follows the slots, including disagreement across slots. Averaging taus is not the call.
+`--send-order shuffled` (`SEND_ORDER=shuffled`) breaks the collinearity. Each ladder gets a seeded permutation whose Kendall tau against fee rank is within ±1/3. On such a ladder a fee sort, FIFO, and LIFO make three different predictions, and the analysis tests arrival against the recorded send order rather than fee order. It is implemented and tested offline, but **it has not been run on mainnet**. The report's [proposed next run](REPORT.md#proposed-next-run) is `SEND_ORDER=shuffled LADDERS=conflict`, which costs 180,186 lamports in fees and puts no rent at risk.
 
 ## What this does not separate
 
-These are limits of the design, not bugs to be papered over. Detail and citations are in [docs/METHODOLOGY.md](docs/METHODOLOGY.md#what-this-does-not-separate).
+Details and citations are in [docs/METHODOLOGY.md](docs/METHODOLOGY.md#what-this-does-not-separate).
 
-- Scheduler pop order and ledger record order, on the non-conflict ladder. Worker threads can finish in a different order than the scheduler queued them.
-- Greedy versus prio-graph, on the conflict ladder alone. Both should serialize a pure conflict set by priority. The non-conflict ladder is what can tell them apart, and only as a hypothesis about ledger order.
-- Operator flags the version string does not carry. Agave `scheduler-bindings` and Firedancer `schedule_strategy` (`perf`, `balanced`, or the deprecated `revenue`) are invisible. `software_client` is the stratification we actually have.
-- Ingress admission and scheduling. The sigverify priority floor, unstaked QUIC limits, and a Jito relayer can drop or delay the ladder before the scheduler runs. Non-landing is not a sample of the ordering rule.
-- Bundle insertion and the ordinary scheduler. We never send a bundle or a tip. A Jito block can still contain bundles, which hold account locks as a group. We do not claim to know which foreign transactions arrived as a bundle.
-- The full reward/cost surface. The ladders vary the priority fee and hold the message shape fixed. They do not test whether a different compute limit or a different account set would reorder two transactions with the same fee.
-- One sender, one network path. Leaders far from this host see the burst later in an 800 ms window. The design does not multi-home the sender.
-- Alpenglow versus the scheduler. Votor finalizes blocks; it is not the ordering algorithm. Rotor was not part of the 21 October 2026 activation. There is no before/after comparison. Pre-handoff slots are discarded, not contrasted.
+- Fee priority versus reverse arrival, in the committed data (see the collinearity limit).
+- Scheduler pop order versus ledger record order, on the non-conflict ladder. Worker threads can finish out of queue order.
+- Greedy versus prio-graph on the conflict ladder alone. Both serialize a pure conflict set by priority.
+- Operator flags that the client label does not carry, such as Firedancer `schedule_strategy` and Agave scheduler bindings.
+- Ingress and scheduling. QUIC admission, sigverify, and Jito relayers act before the scheduler, so non-landing is not a sample of the ordering rule.
+- Bundles. We send none. A Jito block can still contain them.
+- The full reward/cost surface. The compute limit and the account set are held fixed.
+- One sender, one network path, one slot per validator per run.
 
-## Report and raw data
+## Raw data
 
-Copy [docs/REPORT_TEMPLATE.md](docs/REPORT_TEMPLATE.md) when a live run exists. Every measurement row needs a UTC date, and the report needs a "What went wrong" section even when the list is short. Raw `getBlock` bodies and the signature/slot log stay under `data/` so a judge can repeat the lookup.
-
-<!-- TODO: sync with measure/ -->
-
-The submission checklist maps each bounty requirement and each judging weight onto a file: [docs/SUBMISSION_CHECKLIST.md](docs/SUBMISSION_CHECKLIST.md).
-
-## Doc map
+`data/runs/<run>/` is committed for both live runs:
 
 | File | Contents |
 | --- | --- |
-| `README.md` | Question, quickstart, the six considerations, limits of the design |
-| `docs/METHODOLOGY.md` | Scheduler background with sources, experimental design, decision rule |
-| `docs/REPORT_TEMPLATE.md` | Per-validator table, measurement log, what went wrong, null results |
-| `docs/SUBMISSION_CHECKLIST.md` | Requirement and judging-criterion coverage |
+| `manifest.json` | Config (cap, TPU copies, send order, ladders), git SHA, targets, and every planned transaction with fee, send index, target slot, and signature. |
+| `validators.json` | Selected identities with `clientId`, version, stake, and TPU address. |
+| `attempts.jsonl` | One row per transmission: signature, send time, endpoint, result. |
+| `block_observations.jsonl` / `.csv` | Landed slot and block index of each probe. |
+| `block_context.jsonl` | Per-block transaction count and positions of our probes. |
+| `blocks/<slot>.json.gz` | `getBlock` body (`transactionDetails: "accounts"`) for each measured slot, backfilled read-only after the runs. |
+| `spend.json` | That run's ledger entries. |
+| `run.log`, `live-stderr.log` | Pipeline logs, with RPC credentials removed. |
+
+Not committed: `data/keys/` (probe keypairs), `data/spend.json` (global ledger), `data/dry-runs/`, `.env`, and any `id.json` or keypair file. See [.gitignore](.gitignore).
 
 ## Sources, short list
 
