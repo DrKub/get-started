@@ -1,0 +1,65 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: pip install -r measure/requirements-dev.txt -r viz/requirements.txt
+      - name: Tests (measure, analysis, viz)
+        run: python -m pytest -q measure analysis viz
+      - name: Reproduce analysis and figures from committed raw data
+        run: |
+          python -m analysis
+          python -m viz
+          git diff --exit-code -- analysis/output figures
+      - name: Offline dry-run sends nothing
+        run: |
+          python -m measure run --fixture-dir measure/tests/fixtures/offline \
+            --min-lead-slots 16 --send-order shuffled --output-dir /tmp/dry
+          python - <<'EOF'
+          import json
+          rows = [json.loads(line) for line in open("/tmp/dry/attempts.jsonl")]
+          assert rows and not any(row["submitted"] for row in rows)
+          EOF
+      - name: No key material in any commit
+        run: |
+          set -e
+          if git log --all --name-only --format= | grep -E '(^|/)(id\.json|\.env|[^/]*keypair[^/]*\.json)$|(^|/)data/keys/'; then
+            echo "key-like file committed"; exit 1
+          fi
+          if git grep -I -n -E '\[([0-9]{1,3}, ?){31,63}[0-9]{1,3}\]' $(git rev-list --all) -- ':!*.svg' ':!*.gz'; then
+            echo "byte-array keypair committed"; exit 1
+          fi
+
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compose file is valid and dry-run is the default
+        run: |
+          docker compose --profile report config --format json > /tmp/compose.json
+          python3 - <<'EOF'
+          import json
+          services = json.load(open("/tmp/compose.json"))["services"]
+          assert services["measure"]["environment"]["MODE"] == "dry-run"
+          assert services["report"]["network_mode"] == "none"
+          EOF
+      - name: Offline report in Docker matches the committed outputs
+        run: |
+          HOST_UID=$(id -u) HOST_GID=$(id -g) docker compose run --rm report
+          git diff --exit-code -- analysis/output figures
