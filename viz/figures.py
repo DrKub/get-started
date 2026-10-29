@@ -252,9 +252,6 @@ def block_position(runs: list[Run]):
     return fig
 
 
-SEND_DODGE_MS = 12
-
-
 def send_time(runs: list[Run]):
     validators = validators_in(runs)
     ladders = ladders_in(runs)
@@ -275,10 +272,15 @@ def send_time(runs: list[Run]):
                 ax.set_yticks([])
                 continue
             t0 = min(p.first_send_ms for _, ps in bursts for p in ps)
+            ticks, tick_labels, offset_x = [], [], 0
             for ladder, probes in bursts:
                 base = min(p.block_index for p in probes)
-                xs = [p.first_send_ms - t0 + p.send_index * SEND_DODGE_MS for p in probes]
+                xs = [offset_x + p.send_index for p in probes]
                 ys = [p.block_index - base for p in probes]
+                ticks += xs
+                tick_labels += [str(p.send_index) for p in probes]
+                burst_ms = min(p.first_send_ms for p in probes) - t0
+                offset_x += max(p.send_index for p in probes) + 2
                 ax.plot(xs, ys, color="#999999", lw=0.9, zorder=2)
                 ax.scatter(xs, ys, c=[cmap(norm(rung_index[p.priority_fee_lamports])) for p in probes],
                            marker=style.LADDER_MARKERS.get(ladder, "o"), s=30, edgecolors=style.INK,
@@ -292,8 +294,9 @@ def send_time(runs: list[Run]):
                 copies = [p.copy_send_unix_ms for p in probes if p.copy_send_unix_ms]
                 spread = max((max(cs) - min(cs) for cs in copies), default=0)
                 copy_note = f" · copies spread {spread} ms" if spread else ""
-                ax.annotate(f"{ladder}{offset}{copy_note}", (min(xs), 0), xytext=(0, 6),
+                ax.annotate(f"{ladder} @ +{burst_ms} ms{offset}{copy_note}", (min(xs), 0), xytext=(0, 6),
                             textcoords="offset points", fontsize=6.5, color=style.MUTED, va="bottom")
+            ax.set_xticks(ticks, tick_labels, fontsize=7)
             ax.invert_yaxis()
             ax.margins(x=0.08, y=0.25)
             ax.yaxis.set_major_locator(plt.MaxNLocator(integer=True, nbins=4))
@@ -301,8 +304,8 @@ def send_time(runs: list[Run]):
             if c == 0:
                 ax.set_ylabel("\u0394 block index\n(0 = earliest probe)")
             if r == nrows - 1:
-                ax.set_xlabel(f"ms since first probe sent to this leader\n(+{SEND_DODGE_MS} ms per send index; "
-                              "a burst leaves within one ms)")
+                ax.set_xlabel("send index within the burst (0 = first stream written)\n"
+                              "+N ms = burst start after this leader's first burst")
     _fee_colorbar(fig, axes.ravel().tolist(), rungs, cmap, norm, shrink=0.35, pad=0.01)
     handles = [
         Line2D([], [], ls="", marker=style.LADDER_MARKERS[k], mfc="white", mec=style.INK, label=f"{k} probe")
@@ -310,10 +313,10 @@ def send_time(runs: list[Run]):
     ]
     fig.legend(handles=handles, loc="outside lower center", ncol=len(handles))
     fig.suptitle(
-        "Send time vs position in block: probes go out lowest fee first, so a line falling to the "
-        "right is arrival order\nand a line rising to the right means later, higher-fee probes "
-        "overtook earlier ones",
-        fontsize=10, x=0.01, ha="left",
+        "Send order vs position in block. Every rung of a burst carries the same millisecond timestamp, so "
+        "only the order is observed, not the spacing.\nRuns 3-4 sent lowest fee first: send index = fee rank. "
+        "Falling to the right = FIFO arrival order; rising = fee order or a LIFO drain (indistinguishable here).",
+        fontsize=9.5, x=0.01, ha="left",
     )
     return fig
 
@@ -415,8 +418,8 @@ FIGURES = {
     ),
     "fig4_send_time": (
         send_time,
-        "Send time vs position in block for each probe burst, showing whether later-sent, higher-fee "
-        "probes overtook earlier ones.",
+        "Send order vs position in block for each probe burst. All rungs of a burst share one send "
+        "timestamp; in runs 3-4 send index equals fee rank, so this is not independent of fig1.",
     ),
     "fig5_cost_waterfall": (
         cost_waterfall,
