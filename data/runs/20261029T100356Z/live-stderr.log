@@ -1,0 +1,73 @@
+2026-10-29 10:03:56,959 INFO saved 4 probe keys under /workspace/itb/data/keys/e1071-20261029T100356Z
+2026-10-29 10:03:57,218 INFO slot clock: slotSubscribe
+2026-10-29 10:03:57,877 INFO [c6553e0a5862e7b5] Negotiated protocol version 0x00000001 (VERSION_1)
+2026-10-29 10:03:57,878 INFO [c6553e0a5862e7b5] ALPN negotiated protocol solana-tpu
+2026-10-29 10:03:58,077 INFO [b685c4f4def8889f] Negotiated protocol version 0x00000001 (VERSION_1)
+2026-10-29 10:03:58,078 INFO [b685c4f4def8889f] ALPN negotiated protocol solana-tpu
+2026-10-29 10:03:58,215 INFO [c74b21513a99de29] Retrying with token (85 bytes)
+2026-10-29 10:03:58,298 INFO [c74b21513a99de29] Negotiated protocol version 0x00000001 (VERSION_1)
+2026-10-29 10:03:58,299 INFO [c74b21513a99de29] ALPN negotiated protocol solana-tpu
+2026-10-29 10:03:58,350 INFO submitted funding via rpc+tpu-fanout at slot 462840535 to ['rpc', '208.91.105.53:5010', '63.254.163.37:5010', '198.13.140.105:12543']
+2026-10-29 10:04:07,264 INFO [c6553e0a5862e7b5] Connection close received (code 0x1, reason dropped)
+2026-10-29 10:04:39,048 INFO [67b6c081b93fc313] Retrying with token (85 bytes)
+2026-10-29 10:04:39,133 INFO [67b6c081b93fc313] Negotiated protocol version 0x00000001 (VERSION_1)
+2026-10-29 10:04:39,133 INFO [67b6c081b93fc313] ALPN negotiated protocol solana-tpu
+2026-10-29 10:04:39,134 INFO warmed 198.13.140.105:12349 in 0.171s
+2026-10-29 10:04:41,452 INFO submitted 6 txs via tpu x1 at slot 462840739 to ['198.13.140.105:12349']
+2026-10-29 10:04:41,599 INFO warmed 198.13.140.105:12349 in 0.171s
+2026-10-29 10:04:41,847 INFO submitted 4 txs via tpu x1 at slot 462840741 to ['198.13.140.105:12349']
+2026-10-29 10:04:42,565 INFO [4f2cf02cd4789618] Retrying with token (85 bytes)
+2026-10-29 10:04:42,649 INFO [4f2cf02cd4789618] Negotiated protocol version 0x00000001 (VERSION_1)
+2026-10-29 10:04:42,649 INFO [4f2cf02cd4789618] ALPN negotiated protocol solana-tpu
+2026-10-29 10:04:42,650 INFO warmed 198.13.140.105:12341 in 0.170s
+2026-10-29 10:04:44,727 INFO submitted 6 txs via tpu x1 at slot 462840755 to ['198.13.140.105:12341']
+2026-10-29 10:04:44,817 INFO warmed 198.13.140.105:12341 in 0.170s
+2026-10-29 10:04:45,088 INFO submitted 4 txs via tpu x1 at slot 462840757 to ['198.13.140.105:12341']
+2026-10-29 10:04:45,193 INFO warmed 208.91.105.53:5010 in 0.012s
+2026-10-29 10:04:47,097 INFO [1951963726246ebd] Negotiated protocol version 0x00000001 (VERSION_1)
+2026-10-29 10:04:47,098 INFO [1951963726246ebd] ALPN negotiated protocol solana-tpu
+2026-10-29 10:04:47,149 INFO submitted 6 txs via tpu x1 at slot 462840767 to ['208.91.105.53:5010']
+2026-10-29 10:04:47,289 INFO warmed 208.91.105.53:5010 in 0.006s
+2026-10-29 10:04:47,510 INFO submitted 4 txs via tpu x1 at slot 462840769 to ['208.91.105.53:5010']
+2026-10-29 10:04:47,792 INFO [c7397a188e659235] Retrying with token (85 bytes)
+2026-10-29 10:04:47,870 INFO [c7397a188e659235] Negotiated protocol version 0x00000001 (VERSION_1)
+2026-10-29 10:04:47,871 INFO [c7397a188e659235] ALPN negotiated protocol solana-tpu
+2026-10-29 10:04:47,871 INFO warmed 86.54.152.246:9007 in 0.158s
+2026-10-29 10:04:49,557 INFO submitted 6 txs via tpu x1 at slot 462840779 to ['86.54.152.246:9007']
+2026-10-29 10:04:49,691 INFO warmed 86.54.152.246:9007 in 0.158s
+2026-10-29 10:04:50,095 INFO submitted 4 txs via tpu x1 at slot 462840781 to ['86.54.152.246:9007']
+2026-10-29 10:04:50,362 INFO [3f4aa6e794145ffd] Negotiated protocol version 0x00000001 (VERSION_1)
+2026-10-29 10:04:50,363 INFO [3f4aa6e794145ffd] ALPN negotiated protocol solana-tpu
+2026-10-29 10:04:50,364 INFO warmed 64.130.57.215:8002 in 0.088s
+2026-10-29 10:04:50,500 INFO submitted 6 txs via tpu x1 at slot 462840783 to ['64.130.57.215:8002']
+2026-10-29 10:04:50,741 INFO warmed 64.130.57.215:8002 in 0.088s
+2026-10-29 10:04:50,968 INFO submitted 4 txs via tpu x1 at slot 462840785 to ['64.130.57.215:8002']
+2026-10-29 10:04:51,664 INFO [3f4aa6e794145ffd] Connection close received (code 0x1, reason dropped)
+2026-10-29 10:10:01,996 INFO [4f3677c4e4c8cab1] Negotiated protocol version 0x00000001 (VERSION_1)
+2026-10-29 10:10:01,997 INFO [4f3677c4e4c8cab1] ALPN negotiated protocol solana-tpu
+2026-10-29 10:10:01,998 INFO warmed 5.199.172.176:12002 in 0.125s
+2026-10-29 10:10:04,118 INFO submitted 6 txs via tpu x1 at slot 462842239 to ['5.199.172.176:12002']
+2026-10-29 10:10:04,274 INFO warmed 5.199.172.176:12002 in 0.125s
+2026-10-29 10:10:04,581 INFO submitted 4 txs via tpu x1 at slot 462842241 to ['5.199.172.176:12002']
+2026-10-29 10:10:43,185 INFO reconciled e1071-20261029T100356Z to 320228 on-chain lamports (0 unread) (ledger 740600 -> 740600)
+2026-10-29 10:10:43,813 INFO swept 650246 lamports from 3nb8bwDUDvWt5eQbi6rFQnUvqUz6FrtsQe2UD4CiiXPY back to the funder
+2026-10-29 10:10:44,441 INFO swept 650246 lamports from 5PMDsXzRfYqt1vhcJNtJEDjeAnu4H1nYHYgf1LRM8kEQ back to the funder
+2026-10-29 10:10:45,029 INFO swept 650246 lamports from 8Zn5AC7D9g5io3f4s74a81VcbEYArwkuBEjobkNU1FHx back to the funder
+2026-10-29 10:10:45,674 INFO swept 650246 lamports from DXy4zQkASZvFG1MraMCMCrm4GEbnzeqQVX3Ptno6w1sU back to the funder
+2026-10-29 10:10:45,674 INFO sweep closed 4 accounts, returned 2600984 lamports, 0 failed
+LIVE
+experiment: e1071-20261029T100356Z
+source: rpc
+alpenglow regime: after (ok=True)
+planned fee: 0.000340228 SOL (340228 lamports) / cap 0.003500000 SOL
+net after sweep: 0.000340228 SOL; peak including temporary rent: 0.002941212 SOL
+targets: 6 families: firedancer, jito-solana, agave, harmonic-firedancer, harmonic-agave, agave-bam
+  9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY  Firedancer 26.10.4  tpu@462840780
+  HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU  JitoLabs 4.3.2  tpu@462840784
+  7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE  Agave 4.3.2  tpu@462842240
+  JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b  HarmonicFiredancer 26.10.4  tpu@462840740
+  Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk  HarmonicAgave 4.3.2  tpu@462840756
+  DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy  AgaveBam 4.4.0-rc.1  tpu@462840768
+planned transactions: 64
+signed: 64  sent: 64
+note: shortened the non-conflict ladder to 4 rungs so net fees stay within 0.0006 SOL and peak capital, including rent that sweep returns, stays within 0.003 SOL

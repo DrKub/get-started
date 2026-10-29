@@ -1,0 +1,16 @@
+LIVE
+experiment: e1071-20261029T100356Z
+source: rpc
+alpenglow regime: after (ok=True)
+planned fee: 0.000340228 SOL (340228 lamports) / cap 0.003500000 SOL
+net after sweep: 0.000340228 SOL; peak including temporary rent: 0.002941212 SOL
+targets: 6 families: firedancer, jito-solana, agave, harmonic-firedancer, harmonic-agave, agave-bam
+  9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY  Firedancer 26.10.4  tpu@462840780
+  HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU  JitoLabs 4.3.2  tpu@462840784
+  7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE  Agave 4.3.2  tpu@462842240
+  JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b  HarmonicFiredancer 26.10.4  tpu@462840740
+  Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk  HarmonicAgave 4.3.2  tpu@462840756
+  DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy  AgaveBam 4.4.0-rc.1  tpu@462840768
+planned transactions: 64
+signed: 64  sent: 64
+note: shortened the non-conflict ladder to 4 rungs so net fees stay within 0.0006 SOL and peak capital, including rent that sweep returns, stays within 0.003 SOL
