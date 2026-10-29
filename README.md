@@ -6,7 +6,7 @@ Measurement project for the Superteam Earn bounty [Inside the Block: How Solana 
 
 The primary evidence is transactions this project sent into each leader's window. Other transactions in the same block are supplementary. Jito bundles and tips are out of scope. Every measurement in the report is from Solana mainnet after the Alpenglow consensus handoff (slot 459,653,000, 21 October 2026). The planner refuses earlier slots.
 
-**Results:** [REPORT.md](REPORT.md). It covers two live runs, 6 validators across 6 client labels and 3 client families, 24 ladders, 132 of our own probe transactions, and 0.0086 SOL. Every claim links to signatures and slots in [analysis/output/EVIDENCE.md](analysis/output/EVIDENCE.md).
+**Results:** [REPORT.md](REPORT.md). It covers three live runs, 6 validators across 6 client labels and 3 client families, 30 ladders, 168 of our own probe transactions, and 0.0087 SOL. Run 5 shuffled the conflict ladder. Agave, JitoLabs, AgaveBam, and Firedancer were strictly fee-ordered on that shuffle, so for those four clients fee priority is separated from send order. Every claim links to signatures and slots in [analysis/output/EVIDENCE.md](analysis/output/EVIDENCE.md).
 
 ## Layout
 
@@ -15,7 +15,7 @@ The primary evidence is transactions this project sent into each leader's window
 | `measure/` | Live pipeline: leader selection, ladder planning, signing, QUIC send, collection, fee ledger, rent sweep. [Design notes](measure/DESIGN_NOTES.md). |
 | `analysis/` | Offline, standard library only. It reads `data/runs/`, computes tau-b, exact p-values, the bootstrap, raw-block checks, and writes `analysis/output/`. [README](analysis/README.md). |
 | `viz/` | Offline figures from `analysis/output/` to `figures/`. |
-| `data/runs/<run>/` | Committed raw evidence from the two mainnet runs (see [Raw data](#raw-data)). |
+| `data/runs/<run>/` | Committed raw evidence from the three mainnet runs (see [Raw data](#raw-data)). |
 | `docs/METHODOLOGY.md` | Scheduler background, design, pre-registered decision rule, limits. |
 | `docs/SUBMISSION_CHECKLIST.md` | Bounty requirements and judging weights mapped to files. |
 | `REPORT.md` | Results, figures, cost, what went wrong. |
@@ -95,7 +95,7 @@ All variables are read by `measure/config.py`. Compose passes each one through w
 | `TARGET_VALIDATORS` | `6` | Leaders to select. |
 | `MIN_CLIENT_FAMILIES` | `3` | Selection fails unless this many families (Agave, Jito, Firedancer) are covered. |
 | `TPU_COPIES` | `1` | Copies of each burst written to the leader's TPU. Run 3 used 2; see the report. |
-| `SEND_ORDER` | `ascending` | `ascending` (lowest fee first, as in both runs), `descending`, or `shuffled`. See [the collinearity limit](#the-main-limit-fee-order-and-send-order-are-collinear). |
+| `SEND_ORDER` | `ascending` | `ascending` (lowest fee first; runs 3 and 4), `descending`, or `shuffled` (run 5). See [fee order and send order](#fee-order-and-send-order). |
 | `SEND_ORDER_SEED` | CRC32 of the run id | Seed for `shuffled`. Recorded in the manifest. |
 | `LADDERS` | `both` | `both`, or `conflict` (no payers to fund, no rent at risk). |
 | `COLLECT` | `1` in Compose, off on the CLI | Fetch `getBlock` after a live send. |
@@ -129,7 +129,7 @@ Each ladder goes to one leader in one burst, aimed at that leader's QUIC TPU (`g
 
 ### Leader schedule and selection
 
-`getSlotLeaders` gives the schedule from the current slot forward. Each leader is labelled with `clientId` from `getClusterNodes` (Agave, JitoLabs, AgaveBam, HarmonicAgave, Firedancer, HarmonicFiredancer). The selector picks round-robin across labels, preferring identities with more upcoming windows, then earlier ones. It stops at `TARGET_VALIDATORS` and fails unless `MIN_CLIENT_FAMILIES` families are covered. It also swaps in one identity outside the ten largest by stake when one is scheduled. The block's `Fee` reward recipient confirms afterwards that the intended leader produced the slot. It matched in all 24 measured slots.
+`getSlotLeaders` gives the schedule from the current slot forward. Each leader is labelled with `clientId` from `getClusterNodes` (Agave, JitoLabs, AgaveBam, HarmonicAgave, Firedancer, HarmonicFiredancer). The selector picks round-robin across labels, preferring identities with more upcoming windows, then earlier ones. It stops at `TARGET_VALIDATORS` and fails unless `MIN_CLIENT_FAMILIES` families are covered. It also swaps in one identity outside the ten largest by stake when one is scheduled. The block's `Fee` reward recipient confirms afterwards that the intended leader produced the slot. It matched in all 30 measured slots.
 
 ### Statistic and decision rule
 
@@ -143,23 +143,23 @@ For each ladder, Kendall tau-b is computed between fee and block index over our 
 | `arrival` | the same thresholds against send order |
 | `no_rule_detected` | anything else |
 
-Pooled shares use a cluster bootstrap over whole ladders (10,000 replicates, seed 20261029). Validator rollups report `mixed_across_slots` when a validator's two runs disagree; taus are never averaged into a call.
+Pooled shares use a cluster bootstrap over whole ladders (10,000 replicates, seed 20261029). Validator rollups report `mixed_across_slots` when a validator's slots disagree; taus are never averaged into a call.
 
 ### Competition inside the block
 
-Tau is computed on our signatures, so a foreign transaction between two probes does not by itself change it. The analysis re-derives every block index from the stored raw block. It also counts foreign transactions that write any account our ladder locks; a ladder with any such writer would be flagged `contaminated`. The count was zero in all 24 ladders.
+Tau is computed on our signatures, so a foreign transaction between two probes does not by itself change it. The analysis re-derives every block index from the stored raw block. It also counts foreign transactions that write any account our ladder locks; a ladder with any such writer would be flagged `contaminated`. The count was zero in all 30 ladders.
 
-### The main limit: fee order and send order are collinear
+### Fee order and send order
 
-Both runs sent every ladder lowest fee first, and all rungs of a burst share one millisecond send timestamp. Fee rank and send rank are therefore the same ranking. Arrival at the leader is not observed. "Ordered by fee" (tau −1) and "ordered by arrival" (tau +1) are distinguishable only by direction. Any mechanism that drains a burst last-in-first-out predicts exactly what a fee sort predicts. The report states every `strict_priority` call with this caveat.
+Runs 3 and 4 sent every ladder lowest fee first, and all rungs of a burst share one millisecond send timestamp. Fee rank and send rank are the same ranking on those 24 ladders. Arrival at the leader is not observed. "Ordered by fee" (tau −1) and "ordered by arrival" (tau +1) are distinguishable only by direction, and a last-in-first-out drain predicts the same block as a fee sort.
 
-`--send-order shuffled` (`SEND_ORDER=shuffled`) breaks the collinearity. Each ladder gets a seeded permutation whose Kendall tau against fee rank is within ±1/3. On such a ladder a fee sort, FIFO, and LIFO make three different predictions, and the analysis tests arrival against the recorded send order rather than fee order. It is implemented and tested offline, but **it has not been run on mainnet**. The report's [proposed next run](REPORT.md#proposed-next-run) is `SEND_ORDER=shuffled LADDERS=conflict`, which costs 180,186 lamports in fees and puts no rent at risk.
+Run 5 (`SEND_ORDER=shuffled`, `LADDERS=conflict`) broke that collinearity. Each ladder is a seeded permutation with |tau(fee, send)| ≤ 1/3, so a fee sort, FIFO, and LIFO predict three different block orders. The analysis tests arrival against the recorded send order. Agave, JitoLabs, AgaveBam, and Firedancer each landed at tau(fee) = −1 with |tau(send)| ≤ 1/3: strict priority, independent of send order, one slot each. The non-conflict ladder was not shuffled, and both Harmonic clients stayed off `strict_priority`. HarmonicFiredancer's shuffled slot was reversed (tau +0.867) and is reported as a one-slot anomaly, not a rule. Details are in [REPORT.md](REPORT.md#fee-order-and-send-order). `--send-order descending` has not been run.
 
 ## What this does not separate
 
 Details and citations are in [docs/METHODOLOGY.md](docs/METHODOLOGY.md#what-this-does-not-separate).
 
-- Fee priority versus reverse arrival, in the committed data (see the collinearity limit).
+- Fee priority versus reverse arrival on the non-conflict ladder, and for both Harmonic clients. Run 5 separated them for Agave, JitoLabs, AgaveBam, and Firedancer on the conflict ladder only.
 - Scheduler pop order versus ledger record order, on the non-conflict ladder. Worker threads can finish out of queue order.
 - Greedy versus prio-graph on the conflict ladder alone. Both serialize a pure conflict set by priority.
 - Operator flags that the client label does not carry, such as Firedancer `schedule_strategy` and Agave scheduler bindings.
@@ -170,7 +170,7 @@ Details and citations are in [docs/METHODOLOGY.md](docs/METHODOLOGY.md#what-this
 
 ## Raw data
 
-`data/runs/<run>/` is committed for both live runs:
+`data/runs/<run>/` is committed for all three live runs:
 
 | File | Contents |
 | --- | --- |
@@ -179,7 +179,7 @@ Details and citations are in [docs/METHODOLOGY.md](docs/METHODOLOGY.md#what-this
 | `attempts.jsonl` | One row per transmission: signature, send time, endpoint, result. |
 | `block_observations.jsonl` / `.csv` | Landed slot and block index of each probe. |
 | `block_context.jsonl` | Per-block transaction count and positions of our probes. |
-| `blocks/<slot>.json.gz` | `getBlock` body (`transactionDetails: "accounts"`) for each measured slot, backfilled read-only after the runs. |
+| `blocks/<slot>.json.gz` | Compact `getBlock` body (accounts layout) for each measured slot. Runs 3–5 were backfilled read-only with `analysis.fetch_blocks`. The collector now writes this same gzip itself. |
 | `spend.json` | That run's ledger entries. |
 | `run.log`, `live-stderr.log` | Pipeline logs, with RPC credentials removed. |
 

@@ -188,7 +188,7 @@ Selection procedure:
 4. Record active stake in SOL. Include at least one identity outside the ten largest by stake when one is scheduled inside the measurement session, so the sample is not only the largest operators' order flow. If none is, the report says so under what went wrong.
 5. Resolve each identity's upcoming absolute slots. A selected identity whose window never arrives during the session is listed as not measured and does not count toward the six.
 
-**As built** (`measure/select.py`): both live runs ran without `VALIDATORS_APP_TOKEN`, so the label is `getClusterNodes` `clientId` (Agave, JitoLabs, AgaveBam, HarmonicAgave, Firedancer, HarmonicFiredancer), and `measure/versions.py` maps it to a family (Agave, Jito, Firedancer). Delinquent and label-less nodes are dropped and counted. Candidates are picked round-robin across labels, preferring identities with more upcoming windows, then earlier ones. The selector fails unless `MIN_CLIENT_FAMILIES` (default 3) families are covered. It swaps in one identity outside the ten largest by stake when one is scheduled. Five of the six selected leaders were in the top ten by stake.
+**As built** (`measure/select.py`): all three live runs ran without `VALIDATORS_APP_TOKEN`, so the label is `getClusterNodes` `clientId` (Agave, JitoLabs, AgaveBam, HarmonicAgave, Firedancer, HarmonicFiredancer), and `measure/versions.py` maps it to a family (Agave, Jito, Firedancer). Delinquent and label-less nodes are dropped and counted. Candidates are picked round-robin across labels, preferring identities with more upcoming windows, then earlier ones. The selector fails unless `MIN_CLIENT_FAMILIES` (default 3) families are covered. It swaps in one identity outside the ten largest by stake when one is scheduled. Five of the six selected leaders were in the top ten by stake.
 
 Also store `getClusterNodes` version and TPU QUIC address next to the label. Disagreement is logged in the measurement log and the report. The rule call uses the identity that signed the block, not the label we hoped for.
 
@@ -223,7 +223,7 @@ This is the test of whether ledger order is a global sort by priority. Agave's g
 <a id="93-send-order"></a>
 ### 9.3 Send order and the sign of tau
 
-In both committed runs (`--send-order ascending`, the default) transmission order is the reverse of priority order: the lowest fee goes out first, the highest fee last. `send_index` 0 is the first packet on the wire. On this ladder `send_index` rises one-for-one with `priority_fee_lamports`. Sending the high fee first would make FIFO arrival and priority the same prediction, and the slot could not separate them. Section [9.3.1](#931-collinearity-of-fee-and-send-order) explains what ascending order still cannot separate.
+Runs 3 and 4 used `--send-order ascending` (the default): the lowest fee goes out first, the highest fee last. `send_index` 0 is the first packet on the wire, and on that setting it rises one-for-one with `priority_fee_lamports`. Sending the high fee first would make FIFO arrival and priority the same prediction, and the slot could not separate them. Section [9.3.1](#931-collinearity-of-fee-and-send-order) explains what ascending order still cannot separate, and what run 5's shuffle did separate.
 
 `block_index` 0 is the first transaction in the block. The strictness metric is Kendall tau-b between `priority_fee_lamports` and `block_index`:
 
@@ -233,14 +233,14 @@ In both committed runs (`--send-order ascending`, the default) transmission orde
 | Perfect arrival rule, given low-fee-first | +1 | The low fee was sent first and appears first. |
 | Noise | near 0 | The ranking is neither rule. |
 
-Because fee and `send_index` are the same order, tau-b(fee, block_index) and tau-b(send_index, block_index) are the same number. They are one statistic seen twice, not two independent covariates. The analysis records `tau_fee_send` (tau between fee and send index) for every ladder, and it is +1 in all 24. The `arrival` call is always tested against send order (`tau_send_b`), so it remains correct for a shuffled ladder.
+On an ascending ladder, fee and `send_index` are the same order, so tau-b(fee, block_index) and tau-b(send_index, block_index) are the same number. The analysis records `tau_fee_send` (tau between fee and send index) for every ladder. It is +1 in all 24 ladders of runs 3 and 4, and inside ±1/3 in all six ladders of run 5. The `arrival` call is always tested against send order (`tau_send_b`), so it remains the pre-registered arrival test on a shuffled ladder.
 
 <a id="931-collinearity-of-fee-and-send-order"></a>
 #### 9.3.1 Collinearity of fee and send order
 
-On the committed data, fee rank and send rank are one ranking, and every rung of a burst carries the same `send_unix_ms`. The leader's receive order is not observed. Consequences:
+On runs 3 and 4, fee rank and send rank are one ranking, and every rung of a burst carries the same `send_unix_ms`. The leader's receive order is not observed on any run. Consequences for an ascending ladder:
 
-- A tau of −1 says "the block reversed our send order", which is exactly what a fee sort predicts. It is equally what a last-in-first-out drain predicts, or a receive path that reverses stream order, or batches flushed newest-first. **On these data `strict_priority` and "reverse arrival" cannot be told apart.**
+- A tau of −1 says "the block reversed our send order", which is exactly what a fee sort predicts. It is equally what a last-in-first-out drain predicts, or a receive path that reverses stream order, or batches flushed newest-first. **On ascending data `strict_priority` and "reverse arrival" cannot be told apart.**
 - A tau of +1 separates FIFO arrival from fee priority, but only by direction.
 - Network reordering inside a burst is unmeasured, so a mid-range tau mixes reordering with scheduling.
 
@@ -252,7 +252,9 @@ The fix is to make send order orthogonal to fee order. `--send-order shuffled` (
 | FIFO arrival | tau(send, block) = +1, so \|tau(fee, block)\| ≤ 1/3 |
 | LIFO drain | tau(send, block) = −1, so \|tau(fee, block)\| ≤ 1/3 |
 
-A single slot with tau(fee, block) = −1 is then incompatible with either pure arrival rule, and has exact p = 1/720 under a random permutation. `--send-order descending` is also available: it makes fee and FIFO agree, which tests LIFO directly. Neither mode has been run on mainnet. The cheapest decisive run is `SEND_ORDER=shuffled LADDERS=conflict` (no funding, no rent; 180,186 lamports of fees for six leaders).
+A single slot with tau(fee, block) = −1 is then incompatible with either pure arrival rule, and has exact p = 1/720 under a random permutation. `--send-order descending` is also available: it makes fee and FIFO agree, which tests LIFO directly. It has not been run.
+
+Run 5 (`20261029T110321Z`, `SEND_ORDER=shuffled`, `LADDERS=conflict`, seed 3763027240) is that shuffled run: six leaders, no funding, no rent, 180,186 lamports of fees. Agave, JitoLabs, AgaveBam, and Firedancer each landed at tau(fee, block) = −1 with |tau(send, block)| ≤ 1/3. HarmonicAgave stayed `no_rule_detected` (tau −0.600). HarmonicFiredancer's fee ranking was reversed (tau +0.867, call `no_rule_detected`). The report gives the slots, the permutations, and the hypotheses for that one reversed slot. The non-conflict ladder has not been shuffled.
 
 Two pairwise fractions are easier to read than the sign:
 
@@ -298,7 +300,7 @@ Conflict ladder and non-conflict ladder each get their own call. The validator s
 
 Ties in fee are a pipeline bug (rungs must be unique). Ties in block index cannot happen. Tau-b is still the statistic so a future tie is defined.
 
-Multiple comparison: six validators times two ladders is twelve calls. The report does not Bonferroni-adjust the pre-registered per-slot test, and it says so. The p-value is a description of how unusual the ranking is under a random permutation of that slot, not a claim of a family-wise error rate across the study.
+Multiple comparison: a full run is six validators times two ladders, twelve calls. Run 5 was six conflict calls. The three runs together are 30 ladder observations. The report does not Bonferroni-adjust the pre-registered per-slot test, and it says so. The p-value is a description of how unusual the ranking is under a random permutation of that slot, not a claim of a family-wise error rate across the study.
 
 ### 9.4 Burst timing
 
@@ -306,7 +308,7 @@ One burst per ladder. All rungs are signed before the window. The QUIC connectio
 
 How many slots before the window the socket opens, and the exact send instant, are pipeline parameters. They are written into the manifest. The same values are used for every leader in a run. Changing them mid-study is a new run.
 
-As built: the conflict ladder targets the first slot of the leader's four-slot window (`CONFLICT_SLOT_OFFSET = 0`) and the non-conflict ladder the third (`NONCONFLICT_SLOT_OFFSET = 2`). Each burst is written when the slot clock (`slotSubscribe`) reaches `target_slot − max(1, ⌈RTT / 0.215 s⌉)`, where RTT is the QUIC handshake time to that leader (`burst_offset_slots = 1` is the floor, recorded in the manifest). Every handshake in both runs took 0.006–0.172 s (`live-stderr.log`), so every burst went out one slot before its target. Each probe goes out on its own QUIC stream to the leader's `tpuQuic` address. `TPU_COPIES` (default 1) repeats the whole burst. Run 3 used 2 copies, and run 4 used 1. Two non-conflict bursts aimed at the window's third slot landed in its second: run 3 Firedancer and run 4 AgaveBam. Both are still the intended leader's blocks and are kept. Slot position within the window is therefore confounded with ladder type and is not fully controlled.
+As built: the conflict ladder targets the first slot of the leader's four-slot window (`CONFLICT_SLOT_OFFSET = 0`) and the non-conflict ladder the third (`NONCONFLICT_SLOT_OFFSET = 2`). Each burst is written when the slot clock (`slotSubscribe`) reaches `target_slot − max(1, ⌈RTT / 0.215 s⌉)`, where RTT is the QUIC handshake time to that leader (`burst_offset_slots = 1` is the floor, recorded in the manifest). Every handshake in runs 3 and 4 took 0.006–0.172 s, and run 5's took 0.007–0.171 s (`live-stderr.log`), so every burst went out one slot before its target. Each probe goes out on its own QUIC stream to the leader's `tpuQuic` address. `TPU_COPIES` (default 1) repeats the whole burst. Run 3 used 2 copies, and runs 4 and 5 used 1. Two non-conflict bursts aimed at the window's third slot landed in its second: run 3 Firedancer and run 4 AgaveBam. Both are still the intended leader's blocks and are kept. Slot position within the window is therefore confounded with ladder type and is not fully controlled.
 
 ### 9.5 Spend cap
 
@@ -349,7 +351,7 @@ data/spend.json                    global fee ledger; gitignored
 
 Each `attempts.jsonl` object includes the `signature`, `identity`, `ladder` (`conflict`, `nonconflict`, or `funding`), `fee_lamports`, `priority_fee_lamports`, `cu_limit`, `cu_price`, `send_index`, `send_unix_ms`, `planned_slot`, the endpoint, the submit path, and any `error`.
 
-The collector writes the full `getBlock` response to `blocks/<slot>.json`. For runs 3 and 4 those files were not archived. The committed `blocks/<slot>.json.gz` were fetched read-only afterwards by `python -m analysis.fetch_blocks`, using gzip with a fixed header so the bytes are reproducible. The analysis re-derives every block index and the transaction count from these files and fails if either disagrees with the live observations. It also records, per ladder, the producing leader (`Fee` reward recipient) and whether it matches the target, the ladder's lock set, and the number of foreign writers. A judge can diff them against a fresh `getBlock`.
+The collector writes a compact accounts-layout body to `blocks/<slot>.json.gz` (deterministic gzip: mtime 0, empty filename, compresslevel 9). Writable flags are kept. A full `jsonParsed` body, with keys under `transaction.message.accountKeys`, is accepted by the analysis and normalized to the same shape. A raw `json` encoding, whose keys are bare strings, is rejected because signer and writable flags cannot be recovered reliably. Runs 3, 4, and 5 were collected before that collector change. Run 5's code (`c8f4d89`) still wrote a full uncompressed body on the sending host; those files are not in the repo. The committed `blocks/<slot>.json.gz` for all three runs were fetched read-only afterwards by `python -m analysis.fetch_blocks`. The analysis re-derives every block index and the transaction count from these files and fails if either disagrees with the live observations. It also records, per ladder, the producing leader (`Fee` reward recipient) and whether it matches the target, the ladder's lock set, and the number of foreign writers. A judge can diff them against a fresh `getBlock`.
 
 ## 10. Required considerations
 
@@ -411,7 +413,7 @@ We do not try to reconstruct the scheduler queue. Transactions that were dropped
 
 ### Send order
 
-Send order is an alternative total order, built to be the reverse of fee order, and it is fully observed (`send_index`). The sign test in [§9.3](#93-send-order) is the separation.
+Send order is an alternative total order and it is fully observed (`send_index`). The default, `ascending`, builds it as the reverse of fee order, and the sign test in [§9.3](#93-send-order) is the separation on that ladder. `shuffled` makes send order a third ranking; run 5 used it on the conflict ladder. `descending` has not been run.
 
 What "reverse" cannot fix:
 
@@ -474,7 +476,7 @@ Each question this document originally left to `measure/` has an answer in the c
 1. **Names.** `MODE`, `RPC_URL`, `WS_URL`, `SPEND_CAP_SOL`, `KEYPAIR_PATH`, `VALIDATORS_APP_TOKEN`, `LOOKAHEAD_SLOTS`, `MIN_LEAD_SLOTS`, `TARGET_VALIDATORS`, `MIN_CLIENT_FAMILIES`, `TPU_COPIES`, `SEND_ORDER`, `SEND_ORDER_SEED`, `LADDERS`, `COLLECT`, `DATA_DIR`. The Compose service is `measure`, and live output goes to `data/runs/<UTC>/`. The README has the table.
 2. **Transaction format.** Legacy messages with `SetComputeUnitLimit` and `SetComputeUnitPrice` (`transaction_format: legacy+compute-budget`). `getBlock` uses `maxSupportedTransactionVersion: 1`.
 3. **Compute-unit limit.** 1,000 CU on every rung. A devnet probe at slot 516,359,079 consumed 450 CU, and that probe is recorded in the manifest as `excluded_from_report`.
-4. **QUIC.** `aioquic` 1.7.0 with ALPN `solana-tpu` and a self-signed client certificate. Connections open 12 slots ahead (`quic_warmup_slots`), and the burst goes out at `target_slot − max(1, ⌈RTT / 0.215 s⌉)`, which was one slot in both runs (section 9.4).
+4. **QUIC.** `aioquic` 1.7.0 with ALPN `solana-tpu` and a self-signed client certificate. Connections open 12 slots ahead (`quic_warmup_slots`), and the burst goes out at `target_slot − max(1, ⌈RTT / 0.215 s⌉)`, which was one slot in all three runs (section 9.4).
 5. **Version strings.** Not parsed. `clientId` from `getClusterNodes` is the label (`measure/versions.py`), and version strings are recorded as-is. Neither run used validators.app.
 6. **Jito endpoint.** The dialed address is the gossip `tpuQuic`, recorded per attempt (`tpu_host`, `tpu_port`). No relayer hold is assumed.
 7. **Cap ledger.** Global `data/spend.json`, durable across restarts and run directories. It is reconciled to on-chain `meta.fee` after a live run (section 9.5).
@@ -482,7 +484,7 @@ Each question this document originally left to `measure/` has an answer in the c
 9. **Retries.** None inside the window (`retries_inside_window: false`). `TPU_COPIES` re-sends the same signed bytes; it does not create new signatures.
 10. **Genesis certificate.** `getAgGenesisCert` was available and matched slot 459,652,999 in run 4. The slot cutoff is enforced regardless.
 11. **Container.** Runs as non-root uid 1000. The key mount is read-only, and no secrets are in the image. Dry-run is the Compose default. Logs go to stdout, `run.log`, and `live-stderr.log`. The `report` service has no network.
-12. **Send order.** `ascending` (the default, used by both runs), `descending`, or `shuffled` (section [9.3.1](#931-collinearity-of-fee-and-send-order)). Recorded in the manifest's `design`.
+12. **Send order.** `ascending` (the default; runs 3 and 4), `descending` (not run), or `shuffled` (run 5, conflict ladder only; section [9.3.1](#931-collinearity-of-fee-and-send-order)). Recorded in the manifest's `design`.
 
 ## 14. Source list
 

@@ -34,7 +34,7 @@ The Compose service is `measure`, with build context `./measure`, host network, 
 data/runs/<UTC>/            live only, committed as evidence
   manifest.json  validators.json  attempts.jsonl  spend.json
   block_observations.jsonl  block_observations.csv  block_context.jsonl
-  hypothesis_agreement.json  blocks/<slot>.json[.gz]  run.log  live-stderr.log
+  hypothesis_agreement.json  blocks/<slot>.json.gz  run.log  live-stderr.log
 data/dry-runs/<UTC>/        dry-run plans, gitignored
 data/keys/<UTC>/            probe payer keypairs, 0700/0600, gitignored
 data/spend.json             global fee ledger, gitignored
@@ -51,15 +51,15 @@ Two ladders, fees `0, 1, 2, 4, 8, 16` lamports, same 1,000 CU limit, one-lamport
 - **conflict** at slot offset 0: a self-transfer from the funder on every rung, so the funder is the one shared write lock
 - **nonconflict** at slot offset 2: a fresh payer per rung, each self-transferring, bound to its rung's fee
 
-The send order within a burst is `--send-order`. The default `ascending` sends the low fee first, and both live runs used it. `shuffled` draws a seeded permutation with |tau-b(fee, send)| ≤ 1/3 per ladder (`plan.send_permutation`). `descending` sends the high fee first. `--ladders conflict` drops the non-conflict ladder, and with it the funding, the rent, and the sweep.
+The send order within a burst is `--send-order`. The default `ascending` sends the low fee first; runs 3 and 4 used it. `shuffled` draws a seeded permutation with |tau-b(fee, send)| ≤ 1/3 per ladder (`plan.send_permutation`); run 5 used it on the conflict ladder (seed recorded in that manifest). `descending` sends the high fee first and has not been run. `--ladders conflict` drops the non-conflict ladder, and with it the funding, the rent, and the sweep. Run 5 used it.
 
 Run 3 (`9d482c8`) predates the self-transfer form. Its 12 probe accounts were funded once as a shared pool (six payers and six recipients), the conflict ladder reused the first recipient, and the keys were held only in memory, so the rent could not be swept. Run 4 (`164768b`) and later use the form above.
 
-QUIC connections open `QUIC_WARMUP_SLOTS` (12) before the target. The burst fires at `target_slot − max(BURST_OFFSET_SLOTS, ceil(rtt / 0.215 s))`, which was one slot for every burst in runs 3 and 4. Both constants are in `manifest.json` and are the same for every leader.
+QUIC connections open `QUIC_WARMUP_SLOTS` (12) before the target. The burst fires at `target_slot − max(BURST_OFFSET_SLOTS, ceil(rtt / 0.215 s))`, which was one slot for every burst in runs 3, 4, and 5. Both constants are in `manifest.json` and are the same for every leader.
 
 `getAgGenesisCert` is called on live RPC. The stored certificate slot is checked against 459,652,999. The measurement cutoff remains slot `459653000` even when the method is missing.
 
-`getBlock` uses `maxSupportedTransactionVersion: 1`. Probes themselves are legacy transactions with `SetComputeUnitLimit` and `SetComputeUnitPrice`, not SIMD-0385 v1 messages. The controlled variable is the priority fee in lamports. Version 0 `getBlock` requests fail on current mainnet because blocks contain v1 transactions. Entry index is absent from `getBlock`, so tau uses the block index.
+`getBlock` uses `maxSupportedTransactionVersion: 1` and `jsonParsed`. The collector stores a compact accounts-layout gzip (`blocks/<slot>.json.gz`), keeping writable flags and dropping the rest of the body. The analysis also accepts a full `jsonParsed` body. Probes themselves are legacy transactions with `SetComputeUnitLimit` and `SetComputeUnitPrice`, not SIMD-0385 v1 messages. The controlled variable is the priority fee in lamports. Version 0 `getBlock` requests fail on current mainnet because blocks contain v1 transactions. Entry index is absent from `getBlock`, so tau uses the block index.
 
 The 1,000 CU limit was frozen from a devnet `simulateTransaction` on 2026-10-29 (slot 516359079, 450 CU consumed). That probe is a manifest constant, not a call on every run, and it is not a measurement.
 

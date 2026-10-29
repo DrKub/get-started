@@ -67,7 +67,7 @@ Signatures for that slot, in block order:
 | --- | --- | --- | --- | --- | --- |
 | | | | | | |
 
-A judge checks a row by calling `getBlock` on the slot, finding the signature, and confirming the index. The raw response used here is `data/runs/<run>/blocks/<slot>.json` from the collector, or `<slot>.json.gz` from `python -m analysis.fetch_blocks`. `analysis/output/EVIDENCE.md` already lists each ladder's signatures in block order with explorer links; link to its anchor rather than copying it.
+A judge checks a row by calling `getBlock` on the slot, finding the signature, and confirming the index. The raw response used here is `data/runs/<run>/blocks/<slot>.json.gz`: the compact accounts layout, whether the collector wrote it or `python -m analysis.fetch_blocks` did. The analysis also accepts a full `jsonParsed` body. `analysis/output/EVIDENCE.md` already lists each ladder's signatures in block order with explorer links; link to its anchor rather than copying it.
 
 ## Measurement log
 

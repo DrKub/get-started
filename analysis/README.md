@@ -54,9 +54,11 @@ measured slot. For each ladder, the analysis:
   rungs overlap;
 - counts foreign transactions that write any account in that set.
 
-All 24 ladders have a matching leader and zero foreign writers.
+All 30 ladders have a matching leader and zero foreign writers.
 
-The blocks for runs 3 and 4 were fetched after the runs, read-only, with:
+`load_raw_block` accepts the compact accounts layout (`transaction.accountKeys` as objects with `pubkey` and `writable`) and a full `jsonParsed` body (`transaction.message.accountKeys`). A raw `json` encoding, whose account keys are strings without writable flags, is rejected. The collector writes the compact layout as `blocks/<slot>.json.gz` (deterministic gzip). Runs 3, 4, and 5 were measured before that collector change; their committed blocks are the same layout, fetched afterwards.
+
+The blocks were fetched after the runs, read-only, with:
 
 ```bash
 python3 -m analysis.fetch_blocks [--rpc-url URL] [--force]
