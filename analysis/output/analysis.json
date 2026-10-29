@@ -1,0 +1,821 @@
+{
+  "inputs": [
+    "20261029T094113Z",
+    "20261029T100356Z"
+  ],
+  "method": {
+    "p_value": "exact one-sided permutation enumeration in observed direction",
+    "bootstrap": "percentile CI resampling validator-run ladders",
+    "bootstrap_seed": 20261029,
+    "bootstrap_replicates": 10000
+  },
+  "ladder_statistics": [
+    {
+      "run": "20261029T094113Z",
+      "identity": "7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE",
+      "client": "Agave",
+      "version": "4.3.2",
+      "ladder": "conflict",
+      "slot": 462834648,
+      "n": 6,
+      "tau_b": -1.0,
+      "exact_p_value": 0.001388888888888889,
+      "priority_pairs": 15,
+      "arrival_pairs": 0,
+      "pairs": 15,
+      "priority_pair_share": 1.0,
+      "arrival_pair_share": 0.0,
+      "call": "strict_priority"
+    },
+    {
+      "run": "20261029T094113Z",
+      "identity": "7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE",
+      "client": "Agave",
+      "version": "4.3.2",
+      "ladder": "nonconflict",
+      "slot": 462834650,
+      "n": 6,
+      "tau_b": 1.0,
+      "exact_p_value": 0.001388888888888889,
+      "priority_pairs": 0,
+      "arrival_pairs": 15,
+      "pairs": 15,
+      "priority_pair_share": 0.0,
+      "arrival_pair_share": 1.0,
+      "call": "arrival"
+    },
+    {
+      "run": "20261029T094113Z",
+      "identity": "9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY",
+      "client": "Firedancer",
+      "version": "26.10.4",
+      "ladder": "conflict",
+      "slot": 462835056,
+      "n": 6,
+      "tau_b": -1.0,
+      "exact_p_value": 0.001388888888888889,
+      "priority_pairs": 15,
+      "arrival_pairs": 0,
+      "pairs": 15,
+      "priority_pair_share": 1.0,
+      "arrival_pair_share": 0.0,
+      "call": "strict_priority"
+    },
+    {
+      "run": "20261029T094113Z",
+      "identity": "9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY",
+      "client": "Firedancer",
+      "version": "26.10.4",
+      "ladder": "nonconflict",
+      "slot": 462835057,
+      "n": 6,
+      "tau_b": -1.0,
+      "exact_p_value": 0.001388888888888889,
+      "priority_pairs": 15,
+      "arrival_pairs": 0,
+      "pairs": 15,
+      "priority_pair_share": 1.0,
+      "arrival_pair_share": 0.0,
+      "call": "strict_priority"
+    },
+    {
+      "run": "20261029T094113Z",
+      "identity": "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy",
+      "client": "AgaveBam",
+      "version": "4.4.0-rc.1",
+      "ladder": "conflict",
+      "slot": 462834376,
+      "n": 6,
+      "tau_b": -1.0,
+      "exact_p_value": 0.001388888888888889,
+      "priority_pairs": 15,
+      "arrival_pairs": 0,
+      "pairs": 15,
+      "priority_pair_share": 1.0,
+      "arrival_pair_share": 0.0,
+      "call": "strict_priority"
+    },
+    {
+      "run": "20261029T094113Z",
+      "identity": "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy",
+      "client": "AgaveBam",
+      "version": "4.4.0-rc.1",
+      "ladder": "nonconflict",
+      "slot": 462834378,
+      "n": 6,
+      "tau_b": -0.4666666666666667,
+      "exact_p_value": 0.1361111111111111,
+      "priority_pairs": 11,
+      "arrival_pairs": 4,
+      "pairs": 15,
+      "priority_pair_share": 0.7333333333333333,
+      "arrival_pair_share": 0.26666666666666666,
+      "call": "no_rule_detected"
+    },
+    {
+      "run": "20261029T094113Z",
+      "identity": "Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk",
+      "client": "HarmonicAgave",
+      "version": "4.3.2",
+      "ladder": "conflict",
+      "slot": 462834368,
+      "n": 6,
+      "tau_b": -0.2,
+      "exact_p_value": 0.3597222222222222,
+      "priority_pairs": 9,
+      "arrival_pairs": 6,
+      "pairs": 15,
+      "priority_pair_share": 0.6,
+      "arrival_pair_share": 0.4,
+      "call": "no_rule_detected"
+    },
+    {
+      "run": "20261029T094113Z",
+      "identity": "Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk",
+      "client": "HarmonicAgave",
+      "version": "4.3.2",
+      "ladder": "nonconflict",
+      "slot": 462834370,
+      "n": 6,
+      "tau_b": 0.3333333333333333,
+      "exact_p_value": 0.23472222222222222,
+      "priority_pairs": 5,
+      "arrival_pairs": 10,
+      "pairs": 15,
+      "priority_pair_share": 0.3333333333333333,
+      "arrival_pair_share": 0.6666666666666666,
+      "call": "no_rule_detected"
+    },
+    {
+      "run": "20261029T094113Z",
+      "identity": "HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU",
+      "client": "JitoLabs",
+      "version": "4.3.2",
+      "ladder": "conflict",
+      "slot": 462834404,
+      "n": 6,
+      "tau_b": -1.0,
+      "exact_p_value": 0.001388888888888889,
+      "priority_pairs": 15,
+      "arrival_pairs": 0,
+      "pairs": 15,
+      "priority_pair_share": 1.0,
+      "arrival_pair_share": 0.0,
+      "call": "strict_priority"
+    },
+    {
+      "run": "20261029T094113Z",
+      "identity": "HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU",
+      "client": "JitoLabs",
+      "version": "4.3.2",
+      "ladder": "nonconflict",
+      "slot": 462834406,
+      "n": 6,
+      "tau_b": 0.3333333333333333,
+      "exact_p_value": 0.23472222222222222,
+      "priority_pairs": 5,
+      "arrival_pairs": 10,
+      "pairs": 15,
+      "priority_pair_share": 0.3333333333333333,
+      "arrival_pair_share": 0.6666666666666666,
+      "call": "no_rule_detected"
+    },
+    {
+      "run": "20261029T094113Z",
+      "identity": "JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b",
+      "client": "HarmonicFiredancer",
+      "version": "26.10.4",
+      "ladder": "conflict",
+      "slot": 462834396,
+      "n": 6,
+      "tau_b": -0.7333333333333333,
+      "exact_p_value": 0.027777777777777776,
+      "priority_pairs": 13,
+      "arrival_pairs": 2,
+      "pairs": 15,
+      "priority_pair_share": 0.8666666666666667,
+      "arrival_pair_share": 0.13333333333333333,
+      "call": "priority"
+    },
+    {
+      "run": "20261029T094113Z",
+      "identity": "JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b",
+      "client": "HarmonicFiredancer",
+      "version": "26.10.4",
+      "ladder": "nonconflict",
+      "slot": 462834398,
+      "n": 6,
+      "tau_b": 0.3333333333333333,
+      "exact_p_value": 0.23472222222222222,
+      "priority_pairs": 5,
+      "arrival_pairs": 10,
+      "pairs": 15,
+      "priority_pair_share": 0.3333333333333333,
+      "arrival_pair_share": 0.6666666666666666,
+      "call": "no_rule_detected"
+    },
+    {
+      "run": "20261029T100356Z",
+      "identity": "7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE",
+      "client": "Agave",
+      "version": "4.3.2",
+      "ladder": "conflict",
+      "slot": 462842240,
+      "n": 6,
+      "tau_b": -1.0,
+      "exact_p_value": 0.001388888888888889,
+      "priority_pairs": 15,
+      "arrival_pairs": 0,
+      "pairs": 15,
+      "priority_pair_share": 1.0,
+      "arrival_pair_share": 0.0,
+      "call": "strict_priority"
+    },
+    {
+      "run": "20261029T100356Z",
+      "identity": "7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE",
+      "client": "Agave",
+      "version": "4.3.2",
+      "ladder": "nonconflict",
+      "slot": 462842242,
+      "n": 4,
+      "tau_b": 0.6666666666666666,
+      "exact_p_value": 0.16666666666666666,
+      "priority_pairs": 1,
+      "arrival_pairs": 5,
+      "pairs": 6,
+      "priority_pair_share": 0.16666666666666666,
+      "arrival_pair_share": 0.8333333333333334,
+      "call": "inconclusive"
+    },
+    {
+      "run": "20261029T100356Z",
+      "identity": "9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY",
+      "client": "Firedancer",
+      "version": "26.10.4",
+      "ladder": "conflict",
+      "slot": 462840780,
+      "n": 6,
+      "tau_b": -1.0,
+      "exact_p_value": 0.001388888888888889,
+      "priority_pairs": 15,
+      "arrival_pairs": 0,
+      "pairs": 15,
+      "priority_pair_share": 1.0,
+      "arrival_pair_share": 0.0,
+      "call": "strict_priority"
+    },
+    {
+      "run": "20261029T100356Z",
+      "identity": "9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY",
+      "client": "Firedancer",
+      "version": "26.10.4",
+      "ladder": "nonconflict",
+      "slot": 462840782,
+      "n": 4,
+      "tau_b": -1.0,
+      "exact_p_value": 0.041666666666666664,
+      "priority_pairs": 6,
+      "arrival_pairs": 0,
+      "pairs": 6,
+      "priority_pair_share": 1.0,
+      "arrival_pair_share": 0.0,
+      "call": "inconclusive"
+    },
+    {
+      "run": "20261029T100356Z",
+      "identity": "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy",
+      "client": "AgaveBam",
+      "version": "4.4.0-rc.1",
+      "ladder": "conflict",
+      "slot": 462840768,
+      "n": 6,
+      "tau_b": -1.0,
+      "exact_p_value": 0.001388888888888889,
+      "priority_pairs": 15,
+      "arrival_pairs": 0,
+      "pairs": 15,
+      "priority_pair_share": 1.0,
+      "arrival_pair_share": 0.0,
+      "call": "strict_priority"
+    },
+    {
+      "run": "20261029T100356Z",
+      "identity": "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy",
+      "client": "AgaveBam",
+      "version": "4.4.0-rc.1",
+      "ladder": "nonconflict",
+      "slot": 462840769,
+      "n": 4,
+      "tau_b": -0.3333333333333333,
+      "exact_p_value": 0.375,
+      "priority_pairs": 4,
+      "arrival_pairs": 2,
+      "pairs": 6,
+      "priority_pair_share": 0.6666666666666666,
+      "arrival_pair_share": 0.3333333333333333,
+      "call": "inconclusive"
+    },
+    {
+      "run": "20261029T100356Z",
+      "identity": "Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk",
+      "client": "HarmonicAgave",
+      "version": "4.3.2",
+      "ladder": "conflict",
+      "slot": 462840756,
+      "n": 6,
+      "tau_b": -0.3333333333333333,
+      "exact_p_value": 0.23472222222222222,
+      "priority_pairs": 10,
+      "arrival_pairs": 5,
+      "pairs": 15,
+      "priority_pair_share": 0.6666666666666666,
+      "arrival_pair_share": 0.3333333333333333,
+      "call": "no_rule_detected"
+    },
+    {
+      "run": "20261029T100356Z",
+      "identity": "Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk",
+      "client": "HarmonicAgave",
+      "version": "4.3.2",
+      "ladder": "nonconflict",
+      "slot": 462840758,
+      "n": 4,
+      "tau_b": 0.3333333333333333,
+      "exact_p_value": 0.375,
+      "priority_pairs": 2,
+      "arrival_pairs": 4,
+      "pairs": 6,
+      "priority_pair_share": 0.3333333333333333,
+      "arrival_pair_share": 0.6666666666666666,
+      "call": "inconclusive"
+    },
+    {
+      "run": "20261029T100356Z",
+      "identity": "HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU",
+      "client": "JitoLabs",
+      "version": "4.3.2",
+      "ladder": "conflict",
+      "slot": 462840784,
+      "n": 6,
+      "tau_b": -1.0,
+      "exact_p_value": 0.001388888888888889,
+      "priority_pairs": 15,
+      "arrival_pairs": 0,
+      "pairs": 15,
+      "priority_pair_share": 1.0,
+      "arrival_pair_share": 0.0,
+      "call": "strict_priority"
+    },
+    {
+      "run": "20261029T100356Z",
+      "identity": "HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU",
+      "client": "JitoLabs",
+      "version": "4.3.2",
+      "ladder": "nonconflict",
+      "slot": 462840786,
+      "n": 4,
+      "tau_b": -0.3333333333333333,
+      "exact_p_value": 0.375,
+      "priority_pairs": 4,
+      "arrival_pairs": 2,
+      "pairs": 6,
+      "priority_pair_share": 0.6666666666666666,
+      "arrival_pair_share": 0.3333333333333333,
+      "call": "inconclusive"
+    },
+    {
+      "run": "20261029T100356Z",
+      "identity": "JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b",
+      "client": "HarmonicFiredancer",
+      "version": "26.10.4",
+      "ladder": "conflict",
+      "slot": 462840740,
+      "n": 6,
+      "tau_b": -0.6,
+      "exact_p_value": 0.06805555555555555,
+      "priority_pairs": 12,
+      "arrival_pairs": 3,
+      "pairs": 15,
+      "priority_pair_share": 0.8,
+      "arrival_pair_share": 0.2,
+      "call": "no_rule_detected"
+    },
+    {
+      "run": "20261029T100356Z",
+      "identity": "JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b",
+      "client": "HarmonicFiredancer",
+      "version": "26.10.4",
+      "ladder": "nonconflict",
+      "slot": 462840742,
+      "n": 4,
+      "tau_b": 0.0,
+      "exact_p_value": 0.25,
+      "priority_pairs": 3,
+      "arrival_pairs": 3,
+      "pairs": 6,
+      "priority_pair_share": 0.5,
+      "arrival_pair_share": 0.5,
+      "call": "inconclusive"
+    }
+  ],
+  "pooled_pair_shares": [
+    {
+      "scope": "all",
+      "ladder_clusters": 24,
+      "pairs": 306,
+      "priority_pairs": 225,
+      "priority_pair_share": 0.7352941176470589,
+      "priority_ci_low": 0.5993265993265994,
+      "priority_ci_high": 0.8585858585858586,
+      "arrival_pairs": 81,
+      "arrival_pair_share": 0.2647058823529412,
+      "arrival_ci_low": 0.1414141414141414,
+      "arrival_ci_high": 0.4006734006734007,
+      "bootstrap_unit": "validator-run ladder",
+      "bootstrap_replicates": 10000,
+      "bootstrap_seed": 20261029
+    },
+    {
+      "scope": "conflict",
+      "ladder_clusters": 12,
+      "pairs": 180,
+      "priority_pairs": 164,
+      "priority_pair_share": 0.9111111111111111,
+      "priority_ci_low": 0.8222222222222222,
+      "priority_ci_high": 0.9833333333333333,
+      "arrival_pairs": 16,
+      "arrival_pair_share": 0.08888888888888889,
+      "arrival_ci_low": 0.016666666666666666,
+      "arrival_ci_high": 0.17777777777777778,
+      "bootstrap_unit": "validator-run ladder",
+      "bootstrap_replicates": 10000,
+      "bootstrap_seed": 20261029
+    },
+    {
+      "scope": "nonconflict",
+      "ladder_clusters": 12,
+      "pairs": 126,
+      "priority_pairs": 61,
+      "priority_pair_share": 0.48412698412698413,
+      "priority_ci_low": 0.3055555555555556,
+      "priority_ci_high": 0.6837606837606838,
+      "arrival_pairs": 65,
+      "arrival_pair_share": 0.5158730158730159,
+      "arrival_ci_low": 0.3162393162393162,
+      "arrival_ci_high": 0.6944444444444444,
+      "bootstrap_unit": "validator-run ladder",
+      "bootstrap_replicates": 10000,
+      "bootstrap_seed": 20261029
+    }
+  ],
+  "cross_run_consistency": [
+    {
+      "identity": "7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE",
+      "client": "Agave",
+      "ladder": "conflict",
+      "runs": [
+        "20261029T094113Z",
+        "20261029T100356Z"
+      ],
+      "n": [
+        6,
+        6
+      ],
+      "calls": [
+        "strict_priority",
+        "strict_priority"
+      ],
+      "tau_b": [
+        -1.0,
+        -1.0
+      ],
+      "priority_pair_share": [
+        1.0,
+        1.0
+      ],
+      "consistency": "same_call"
+    },
+    {
+      "identity": "7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE",
+      "client": "Agave",
+      "ladder": "nonconflict",
+      "runs": [
+        "20261029T094113Z",
+        "20261029T100356Z"
+      ],
+      "n": [
+        6,
+        4
+      ],
+      "calls": [
+        "arrival",
+        "inconclusive"
+      ],
+      "tau_b": [
+        1.0,
+        0.6666666666666666
+      ],
+      "priority_pair_share": [
+        0.0,
+        0.16666666666666666
+      ],
+      "consistency": "insufficient_second_run"
+    },
+    {
+      "identity": "9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY",
+      "client": "Firedancer",
+      "ladder": "conflict",
+      "runs": [
+        "20261029T094113Z",
+        "20261029T100356Z"
+      ],
+      "n": [
+        6,
+        6
+      ],
+      "calls": [
+        "strict_priority",
+        "strict_priority"
+      ],
+      "tau_b": [
+        -1.0,
+        -1.0
+      ],
+      "priority_pair_share": [
+        1.0,
+        1.0
+      ],
+      "consistency": "same_call"
+    },
+    {
+      "identity": "9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY",
+      "client": "Firedancer",
+      "ladder": "nonconflict",
+      "runs": [
+        "20261029T094113Z",
+        "20261029T100356Z"
+      ],
+      "n": [
+        6,
+        4
+      ],
+      "calls": [
+        "strict_priority",
+        "inconclusive"
+      ],
+      "tau_b": [
+        -1.0,
+        -1.0
+      ],
+      "priority_pair_share": [
+        1.0,
+        1.0
+      ],
+      "consistency": "insufficient_second_run"
+    },
+    {
+      "identity": "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy",
+      "client": "AgaveBam",
+      "ladder": "conflict",
+      "runs": [
+        "20261029T094113Z",
+        "20261029T100356Z"
+      ],
+      "n": [
+        6,
+        6
+      ],
+      "calls": [
+        "strict_priority",
+        "strict_priority"
+      ],
+      "tau_b": [
+        -1.0,
+        -1.0
+      ],
+      "priority_pair_share": [
+        1.0,
+        1.0
+      ],
+      "consistency": "same_call"
+    },
+    {
+      "identity": "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy",
+      "client": "AgaveBam",
+      "ladder": "nonconflict",
+      "runs": [
+        "20261029T094113Z",
+        "20261029T100356Z"
+      ],
+      "n": [
+        6,
+        4
+      ],
+      "calls": [
+        "no_rule_detected",
+        "inconclusive"
+      ],
+      "tau_b": [
+        -0.4666666666666667,
+        -0.3333333333333333
+      ],
+      "priority_pair_share": [
+        0.7333333333333333,
+        0.6666666666666666
+      ],
+      "consistency": "insufficient_second_run"
+    },
+    {
+      "identity": "Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk",
+      "client": "HarmonicAgave",
+      "ladder": "conflict",
+      "runs": [
+        "20261029T094113Z",
+        "20261029T100356Z"
+      ],
+      "n": [
+        6,
+        6
+      ],
+      "calls": [
+        "no_rule_detected",
+        "no_rule_detected"
+      ],
+      "tau_b": [
+        -0.2,
+        -0.3333333333333333
+      ],
+      "priority_pair_share": [
+        0.6,
+        0.6666666666666666
+      ],
+      "consistency": "same_call"
+    },
+    {
+      "identity": "Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk",
+      "client": "HarmonicAgave",
+      "ladder": "nonconflict",
+      "runs": [
+        "20261029T094113Z",
+        "20261029T100356Z"
+      ],
+      "n": [
+        6,
+        4
+      ],
+      "calls": [
+        "no_rule_detected",
+        "inconclusive"
+      ],
+      "tau_b": [
+        0.3333333333333333,
+        0.3333333333333333
+      ],
+      "priority_pair_share": [
+        0.3333333333333333,
+        0.3333333333333333
+      ],
+      "consistency": "insufficient_second_run"
+    },
+    {
+      "identity": "HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU",
+      "client": "JitoLabs",
+      "ladder": "conflict",
+      "runs": [
+        "20261029T094113Z",
+        "20261029T100356Z"
+      ],
+      "n": [
+        6,
+        6
+      ],
+      "calls": [
+        "strict_priority",
+        "strict_priority"
+      ],
+      "tau_b": [
+        -1.0,
+        -1.0
+      ],
+      "priority_pair_share": [
+        1.0,
+        1.0
+      ],
+      "consistency": "same_call"
+    },
+    {
+      "identity": "HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU",
+      "client": "JitoLabs",
+      "ladder": "nonconflict",
+      "runs": [
+        "20261029T094113Z",
+        "20261029T100356Z"
+      ],
+      "n": [
+        6,
+        4
+      ],
+      "calls": [
+        "no_rule_detected",
+        "inconclusive"
+      ],
+      "tau_b": [
+        0.3333333333333333,
+        -0.3333333333333333
+      ],
+      "priority_pair_share": [
+        0.3333333333333333,
+        0.6666666666666666
+      ],
+      "consistency": "insufficient_second_run"
+    },
+    {
+      "identity": "JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b",
+      "client": "HarmonicFiredancer",
+      "ladder": "conflict",
+      "runs": [
+        "20261029T094113Z",
+        "20261029T100356Z"
+      ],
+      "n": [
+        6,
+        6
+      ],
+      "calls": [
+        "priority",
+        "no_rule_detected"
+      ],
+      "tau_b": [
+        -0.7333333333333333,
+        -0.6
+      ],
+      "priority_pair_share": [
+        0.8666666666666667,
+        0.8
+      ],
+      "consistency": "different_call"
+    },
+    {
+      "identity": "JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b",
+      "client": "HarmonicFiredancer",
+      "ladder": "nonconflict",
+      "runs": [
+        "20261029T094113Z",
+        "20261029T100356Z"
+      ],
+      "n": [
+        6,
+        4
+      ],
+      "calls": [
+        "no_rule_detected",
+        "inconclusive"
+      ],
+      "tau_b": [
+        0.3333333333333333,
+        0.0
+      ],
+      "priority_pair_share": [
+        0.3333333333333333,
+        0.5
+      ],
+      "consistency": "insufficient_second_run"
+    }
+  ],
+  "block_position_summary": [
+    {
+      "scope": "all",
+      "ladders": 24,
+      "min_first_block_fraction": 0.03571428571428571,
+      "median_first_block_fraction": 0.1999394254067151,
+      "max_last_block_fraction": 0.9101123595505618,
+      "median_block_tx_count": 225.0,
+      "median_foreign_txs_between_rungs": 0.0,
+      "mean_foreign_txs_between_rungs": 1.1296296296296295,
+      "max_foreign_txs_between_rungs": 18
+    },
+    {
+      "scope": "conflict",
+      "ladders": 12,
+      "min_first_block_fraction": 0.03571428571428571,
+      "median_first_block_fraction": 0.123943840924973,
+      "max_last_block_fraction": 0.7800829875518672,
+      "median_block_tx_count": 242.5,
+      "median_foreign_txs_between_rungs": 0.0,
+      "mean_foreign_txs_between_rungs": 1.0833333333333333,
+      "max_foreign_txs_between_rungs": 7
+    },
+    {
+      "scope": "nonconflict",
+      "ladders": 12,
+      "min_first_block_fraction": 0.039525691699604744,
+      "median_first_block_fraction": 0.3057291198417693,
+      "max_last_block_fraction": 0.9101123595505618,
+      "median_block_tx_count": 209.5,
+      "median_foreign_txs_between_rungs": 0.0,
+      "mean_foreign_txs_between_rungs": 1.1875,
+      "max_foreign_txs_between_rungs": 18
+    }
+  ]
+}
