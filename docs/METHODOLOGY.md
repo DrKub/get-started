@@ -49,7 +49,7 @@ NUM_CONSECUTIVE_LEADER_SLOTS = 4
 
 That constant is still 4 in the `solana-leader-schedule` crate ([lib.rs](https://docs.rs/solana-leader-schedule/latest/src/solana_leader_schedule/lib.rs.html)). SIMD-0525 shortened the slot from 400 ms to 200 ms and kept four consecutive slots, so a leader's turn is about 800 ms of wall clock rather than 1.6 s ([SIMD-0525](https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0525-reduce-slot-times.md), [upgrade note](https://solana.com/upgrades/reduced-slot-times)). The pipeline confirms the live schedule actually groups the target identity into runs of four, and records the grouping it saw.
 
-`getLeaderSchedule` returns indexes relative to the first slot of the epoch ([RPC](https://solana.com/docs/rpc/http/getleaderschedule)). Absolute slot = epoch start slot + index. The identity in that map is the block-signing identity, not the vote account. Stake from `validators.app` or `getVoteAccounts` joins on identity via the vote account the API returns. Joining stake directly on a vote-account pubkey would attach the wrong weight.
+The pipeline reads the schedule with `getSlotLeaders(start, limit)`, which returns block-signing identities for absolute slots, paged from the current slot forward ([RPC](https://solana.com/docs/rpc/http/getslotleaders)). It does not use `getLeaderSchedule`, whose epoch-relative indexes need the epoch start slot. The identity is the block-signing key, not the vote account. Stake from `getVoteAccounts` joins on `nodePubkey`; joining stake directly on a vote-account pubkey would attach the wrong weight. After the run, the `Fee` reward recipient in each stored block confirms which identity actually produced the slot.
 
 A leader may only produce entries during its slots. The next leader fills ticks if the previous leader's entries are missing or invalid. Fast leader handoff, documented on the Alpenglow upgrade page, lets a leader start building before the previous slot is fully settled. A burst aimed at the edge of a window can land in the next identity's block. Those signatures are attributed to the leader who actually produced the block, which means they do not count toward the intended target.
 
@@ -188,7 +188,9 @@ Selection procedure:
 4. Record active stake in SOL. Include at least one identity outside the ten largest by stake when one is scheduled inside the measurement session, so the sample is not only the largest operators' order flow. If none is, the report says so under what went wrong.
 5. Resolve each identity's upcoming absolute slots. A selected identity whose window never arrives during the session is listed as not measured and does not count toward the six.
 
-Also store `getClusterNodes` version and TPU QUIC address next to the validators.app version. Disagreement is logged in the measurement log and the report. The rule call uses the identity that signed the block, not the label we hoped for.
+**As built** (`measure/select.py`): both live runs ran without `VALIDATORS_APP_TOKEN`, so the label is `getClusterNodes` `clientId` (Agave, JitoLabs, AgaveBam, HarmonicAgave, Firedancer, HarmonicFiredancer), and `measure/versions.py` maps it to a family (Agave, Jito, Firedancer). Delinquent and label-less nodes are dropped and counted. Candidates are picked round-robin across labels, preferring identities with more upcoming windows, then earlier ones. The selector fails unless `MIN_CLIENT_FAMILIES` (default 3) families are covered. It swaps in one identity outside the ten largest by stake when one is scheduled. Five of the six selected leaders were in the top ten by stake.
+
+Also store `getClusterNodes` version and TPU QUIC address next to the label. Disagreement is logged in the measurement log and the report. The rule call uses the identity that signed the block, not the label we hoped for.
 
 ## 9. The two ladders
 
@@ -196,18 +198,24 @@ Each selected leader gets two ladders, sent in different slots of its window whe
 
 ### 9.1 Conflict ladder (primary)
 
-- One fee payer, one recipient, one-lamport system transfer.
-- Same `SetComputeUnitLimit` on every rung.
-- Priority fee in whole lamports, strictly increasing, including a zero-fee rung. Default shape: `0, 1, 2, 4, 8, 16` lamports, six transactions. The pipeline may shorten to five and may not lengthen if the cap, including every retry and every funding transfer, would be at risk.
+- One-lamport system transfer from the funder **to itself**. The funder is the fee payer and the only writable account, so no account is created and nothing needs sweeping.
+- Same `SetComputeUnitLimit` (1,000 CU) on every rung, with `SetComputeUnitPrice` chosen so the priority fee is a whole number of lamports.
+- Priority fee strictly increasing, including a zero-fee rung. Default shape: `0, 1, 2, 4, 8, 16` lamports, six transactions.
 - Unique integer `P` across rungs, checked before send.
-- Because the payer and the recipient are writable in every transaction, the rungs form one conflict chain.
+- Because the funder is writable in every transaction, the rungs form one conflict chain.
+
+Run 3 (`9d482c8`) used an older form: funder to one shared recipient (`87oictqa3Ckckg6udEkJY8iK4P68XRSXEfmAnC3sA1Za`), so its conflict rungs share two writable accounts. Run 4 uses the self-transfer. The analysis derives the lock set from each stored block (the intersection of the rungs' writable keys) and checks foreign writers against it.
 
 This is the test of "higher priority is recorded earlier among transactions that lock the same accounts."
 
 ### 9.2 Non-conflict ladder
 
-- Distinct fee payer and distinct recipient per rung. Funding those payers is a separate transaction in an earlier slot, and its fee counts against the cap. The funding transaction is not part of the ladder.
+- A fresh fee payer per rung, generated for the run, which self-transfers one lamport. Each payer is bound to its own rung's fee whatever the send order.
+- The funder pays each payer its rent-exempt minimum plus that rung's fees in a separate funding transaction before the burst. The pipeline waits for funding to land. Funding fees count against the cap; the principal is temporary capital, not spend.
+- Payer keys are written to `data/keys/<run>/` (directory 0700, files 0600, gitignored). After the run, `measure sweep` (also called automatically at the end of a live run) returns each balance to the funder, less one 5,000-lamport sweep fee.
 - Same limits, same fee steps, same transfer amount.
+
+Run 3 used a payer and a separate recipient per rung (12 accounts; the first recipient also served as the conflict ladder's recipient), and did not save the probe keys, so their rent (7,802,952 lamports) could not be swept. Run 4 uses the self-transfer form and was swept to zero. The report's cost section lists the accounts.
 - No shared writable account. The system program and the compute-budget program are readonly and shared, which does not create a write conflict.
 
 This is the test of whether ledger order is a global sort by priority. Agave's greedy scheduler can show no such sort here and still order the conflict ladder by fee. That pair of outcomes is a meaningful result.
@@ -215,7 +223,7 @@ This is the test of whether ledger order is a global sort by priority. Agave's g
 <a id="93-send-order"></a>
 ### 9.3 Send order and the sign of tau
 
-Transmission order is the reverse of fee order: the lowest fee goes out first, the highest fee last. `send_index` 0 is the first packet on the wire. On this ladder `send_index` rises one-for-one with `priority_fee_lamports`. Sending the high fee first would make arrival and priority the same prediction, and the slot could not separate them.
+In both committed runs (`--send-order ascending`, the default) transmission order is the reverse of priority order: the lowest fee goes out first, the highest fee last. `send_index` 0 is the first packet on the wire. On this ladder `send_index` rises one-for-one with `priority_fee_lamports`. Sending the high fee first would make FIFO arrival and priority the same prediction, and the slot could not separate them. Section [9.3.1](#931-collinearity-of-fee-and-send-order) explains what ascending order still cannot separate.
 
 `block_index` 0 is the first transaction in the block. The strictness metric is Kendall tau-b between `priority_fee_lamports` and `block_index`:
 
@@ -225,7 +233,26 @@ Transmission order is the reverse of fee order: the lowest fee goes out first, t
 | Perfect arrival rule, given low-fee-first | +1 | The low fee was sent first and appears first. |
 | Noise | near 0 | The ranking is neither rule. |
 
-Because fee and `send_index` are the same order, tau-b(fee, block_index) and tau-b(send_index, block_index) share a sign. They are one statistic seen twice, not two independent covariates. The report prints both so that duplication is visible, and it does not enter them in a regression as if they were separable.
+Because fee and `send_index` are the same order, tau-b(fee, block_index) and tau-b(send_index, block_index) are the same number. They are one statistic seen twice, not two independent covariates. The analysis records `tau_fee_send` (tau between fee and send index) for every ladder, and it is +1 in all 24. The `arrival` call is always tested against send order (`tau_send_b`), so it remains correct for a shuffled ladder.
+
+<a id="931-collinearity-of-fee-and-send-order"></a>
+#### 9.3.1 Collinearity of fee and send order
+
+On the committed data, fee rank and send rank are one ranking, and every rung of a burst carries the same `send_unix_ms`. The leader's receive order is not observed. Consequences:
+
+- A tau of −1 says "the block reversed our send order", which is exactly what a fee sort predicts. It is equally what a last-in-first-out drain predicts, or a receive path that reverses stream order, or batches flushed newest-first. **On these data `strict_priority` and "reverse arrival" cannot be told apart.**
+- A tau of +1 separates FIFO arrival from fee priority, but only by direction.
+- Network reordering inside a burst is unmeasured, so a mid-range tau mixes reordering with scheduling.
+
+The fix is to make send order orthogonal to fee order. `--send-order shuffled` (`SEND_ORDER=shuffled`) draws, for each ladder, a seeded permutation with |tau-b(fee rank, send rank)| ≤ 1/3 (`measure/plan.py`, `send_permutation`). The seed is `SEND_ORDER_SEED`, or CRC32 of the run id, recorded in the manifest. Each non-conflict payer is bound to its rung, so the permutation reorders whole rungs. On a shuffled six-rung ladder:
+
+| Mechanism | Predicts |
+| --- | --- |
+| Fee priority | tau(fee, block) = −1 |
+| FIFO arrival | tau(send, block) = +1, so \|tau(fee, block)\| ≤ 1/3 |
+| LIFO drain | tau(send, block) = −1, so \|tau(fee, block)\| ≤ 1/3 |
+
+A single slot with tau(fee, block) = −1 is then incompatible with either pure arrival rule, and has exact p = 1/720 under a random permutation. `--send-order descending` is also available: it makes fee and FIFO agree, which tests LIFO directly. Neither mode has been run on mainnet. The cheapest decisive run is `SEND_ORDER=shuffled LADDERS=conflict` (no funding, no rent; 180,186 lamports of fees for six leaders).
 
 Two pairwise fractions are easier to read than the sign:
 
@@ -279,44 +306,50 @@ One burst per ladder. All rungs are signed before the window. The QUIC connectio
 
 How many slots before the window the socket opens, and the exact send instant, are pipeline parameters. They are written into the manifest. The same values are used for every leader in a run. Changing them mid-study is a new run.
 
+As built: the conflict ladder targets the first slot of the leader's four-slot window (`CONFLICT_SLOT_OFFSET = 0`) and the non-conflict ladder the third (`NONCONFLICT_SLOT_OFFSET = 2`). Each burst is written when the slot clock (`slotSubscribe`) reaches `target_slot − 1` (`burst_offset_slots = 1` in the manifest). Each probe goes out on its own QUIC stream to the leader's `tpuQuic` address. `TPU_COPIES` (default 1) repeats the whole burst. Run 3 used 2 copies, and run 4 used 1. Two non-conflict bursts aimed at the window's third slot landed in its second: run 3 Firedancer and run 4 AgaveBam. Both are still the intended leader's blocks and are kept. Slot position within the window is therefore confounded with ladder type and is not fully controlled.
+
 ### 9.5 Spend cap
 
 `0.05 SOL` = 50,000,000 lamports is the default and the maximum the process will accept.
 
-Counted against the cap, before signing:
+The ledger is global: `data/spend.json` (`measure/ledger.py`), shared by every run and gitignored. Each run also writes its own entries to `data/runs/<run>/spend.json`. A batch's fees are reserved in the ledger before that batch is signed, and a reservation that would cross the cap stops the run (exit code 3). Counted:
 
 - base fee of 5,000 lamports per signature
 - priority fee of that transaction
-- funding transfers that set up non-conflict payers
+- funding transfers that set up non-conflict payers, and sweep transactions
 - any retry that signs a new transaction
 
-Not counted: dry-run signatures, RPC queries, failed serialization that did not sign.
+Not counted: dry-run signatures, RPC queries, and the **principal** moved into non-conflict payers. That principal is temporary capital, returned by the sweep. The cap is a fee cap, not a balance cap. Run 3 shows why that distinction matters: its fee ledger read 0.00042 SOL while 0.0078 SOL of principal was stranded. The planner therefore also holds the default plan to a net-fee budget of 600,000 lamports and a peak-capital budget (fees plus temporary rent) of 3,000,000 lamports (`measure/budget.py`), shortening the non-conflict ladder to fit. Run 4's ladders were shortened to four rungs this way.
 
-A six-rung conflict ladder plus a six-rung non-conflict ladder, plus six funding transfers, at the default fee steps, is on the order of `18 * 5,000 + (0+1+2+4+8+16)*2` lamports per leader, about 0.0001 SOL. Six leaders are about 0.0006 SOL. The cap exists so a retry loop, a wrong compute-unit limit, or a hand-edited fee cannot drain the account. The running total is durable under `data/` and survives a container restart.
+After a live run, unlanded reservations are released and the run's total is replaced by the sum of on-chain `meta.fee` from `getTransaction` (`ledger reconcile --rpc` does the same by hand). A failed transaction still paid its fee, so it is counted.
 
-<!-- TODO: sync with measure/ -->
-
-The process checks the cap again immediately before each signature. Crossing it stops the run. Already-landed data is kept and the report's what-went-wrong section records the halt.
+Dry-run prints the planned fees, the temporary rent, and the peak. For the default six-leader plan with both ladders, fees are about 0.0003–0.0004 SOL. The cap exists so a retry loop, a wrong compute-unit limit, or a hand-edited fee cannot drain the account.
 
 ### 9.6 Raw record
 
 Per run directory:
 
-<!-- TODO: sync with measure/ -->
-
 ```text
-data/runs/<UTC timestamp>/
-  manifest.json          mode, git sha, cap, rpc identity (no secret), cutoff slot, permutation, CU limit
-  validators.json        identity, vote account, software_client, software_version, stake, jito, tpu, snapshot time
-  spend.json             lamports committed, cap, halt reason
-  attempts.jsonl         one object per signed transaction
-  blocks/<slot>.json     raw getBlock response
-  run.log                stdout/stderr copy
+data/runs/<UTC timestamp>/         live runs only; committed
+  manifest.json                    mode, git sha, cap, RPC host (no key), cutoff slot, design (ladders,
+                                   send_order, send_order_seed, transmission order), CU limit, targets,
+                                   every planned transaction
+  validators.json                  identity, clientId, version, stake, TPU address
+  attempts.jsonl                   one object per transmission
+  block_observations.jsonl / .csv  landed slot and block index per probe, from the live collection
+  block_context.jsonl              per-block transaction count and our positions
+  hypothesis_agreement.json        the pipeline's own first-pass calls
+  blocks/<slot>.json.gz            getBlock body (transactionDetails "accounts") per measured slot
+  spend.json                       this run's ledger entries
+  run.log, live-stderr.log         logs, RPC keys stripped
+data/dry-runs/<UTC timestamp>/     dry-run plans; gitignored, never read by the analysis
+data/keys/<run>/                   probe payer keypairs, 0600; gitignored
+data/spend.json                    global fee ledger; gitignored
 ```
 
-Each `attempts.jsonl` object includes at least: `signature`, `leader_identity`, `ladder` (`conflict` or `nonconflict`), `fee_lamports`, `cu_limit`, `cu_price`, `priority_score`, `send_index`, `send_unix_ms`, `target_slot`, `tpu_host`, `tpu_port`, `landed_slot` (null if not landed), `block_index` (null if not landed), `error`.
+Each `attempts.jsonl` object includes the `signature`, `identity`, `ladder` (`conflict`, `nonconflict`, or `funding`), `fee_lamports`, `priority_fee_lamports`, `cu_limit`, `cu_price`, `send_index`, `send_unix_ms`, `planned_slot`, the endpoint, the submit path, and any `error`.
 
-`blocks/<slot>.json` is the RPC response used to assign indexes, so the judge can diff it against a fresh `getBlock`.
+The collector writes the full `getBlock` response to `blocks/<slot>.json`. For runs 3 and 4 those files were not archived. The committed `blocks/<slot>.json.gz` were fetched read-only afterwards by `python -m analysis.fetch_blocks`, using gzip with a fixed header so the bytes are reproducible. The analysis re-derives every block index and the transaction count from these files and fails if either disagrees with the live observations. It also records, per ladder, the producing leader (`Fee` reward recipient) and whether it matches the target, the ladder's lock set, and the number of foreign writers. A judge can diff them against a fresh `getBlock`.
 
 ## 10. Required considerations
 
@@ -430,23 +463,26 @@ After the live run:
 5. Fill [REPORT_TEMPLATE.md](REPORT_TEMPLATE.md). Dates are the UTC dates of the sends, not the date the report was written.
 6. Leave the raw files in `data/`. The report quotes signatures and slots; it does not replace the raw files.
 
+Steps 1–4 are `python -m analysis` (offline, standard library), which writes `analysis/output/`. That includes `EVIDENCE.md`, where every ladder has an anchor and every rung links to Solscan and Explorer. `python -m viz` then draws `figures/`. Both are deterministic, and CI checks that rerunning them on the committed `data/runs/` leaves `git diff` empty.
+
 Null-result language, to be used when it matches the table: "On the conflict ladder, the landed order is consistent with a random permutation of the fees we set. That supports 'no rule detected' for these slots. It does not prove the leader has no scheduler. It proves that whatever the scheduler did is not visible on these probes, at this sample size, on this path."
 
-## 13. Open questions for the pipeline
+## 13. Pipeline decisions, as built
 
-These are decisions this document leaves to the component under `measure/`. The markers in the README use the same list.
+Each question this document originally left to `measure/` has an answer in the code. Values are from the run-4 manifest unless noted.
 
-1. **Names.** Match `MODE`, `SPEND_CAP_SOL`, `KEYPAIR_PATH`, `RPC_URL`, `VALIDATORS_APP_TOKEN`, service `measure`, and `data/runs/<UTC>/`, or change the README markers in the same patch that names them.
-2. **Transaction format.** Legacy or v0 with `SetComputeUnitPrice` / `SetComputeUnitLimit`, or SIMD-0385 v1 with an absolute fee. Mainnet has had v1 since 15 September 2026. `getBlock` must be called with a `maxSupportedTransactionVersion` that actually returns these transactions.
-3. **Compute-unit limit.** Probe it on devnet, freeze one value that a one-lamport system transfer never exceeds, and use that value on every mainnet rung. Devnet slots stay out of the report.
-4. **QUIC.** Which client library, how the connection is warmed, and how many milliseconds or slots before the window the burst goes out. Write the chosen offset into `manifest.json` and keep it fixed for the run.
-5. **Version strings.** Confirm live `getClusterNodes` `version` values before writing a parser. Jito, Firedancer, and Agave do not share one suffix convention. Prefer validators.app `software_client` when the token is present.
-6. **Jito endpoint.** Record whether the dialed TPU from gossip differs from other published addresses. Do not assume a 200 ms relayer hold.
-7. **Cap ledger.** Persist lamports-signed across restarts. A second `docker compose up` in `MODE=live` continues the same cap rather than resetting it. Define whether the cap is per run directory or global; the README currently says the running total lives under `data/` and survives a restart, so a new run directory must not be a way to reset the cap during a study. A global `data/spend.json` is the safer reading.
-8. **Ladder length.** Default six rungs, minimum five landed for a call. If the funding math changes, shorten the non-conflict ladder before the conflict ladder, and never drop below six identities or three client families to pay for more rungs.
-9. **Retries.** Default is no retry inside the window. If a retry exists, it is a new row with a new signature and it counts against the cap.
-10. **Genesis certificate.** Call `getAgGenesisCert` when the RPC has it. Keep the slot cutoff either way.
-11. **Container.** Non-root user, logs to stdout and `run.log`, key mount read-only, no secrets in the image. Dry-run is the compose default with zero extra flags.
+1. **Names.** `MODE`, `RPC_URL`, `WS_URL`, `SPEND_CAP_SOL`, `KEYPAIR_PATH`, `VALIDATORS_APP_TOKEN`, `LOOKAHEAD_SLOTS`, `MIN_LEAD_SLOTS`, `TARGET_VALIDATORS`, `MIN_CLIENT_FAMILIES`, `TPU_COPIES`, `SEND_ORDER`, `SEND_ORDER_SEED`, `LADDERS`, `COLLECT`, `DATA_DIR`. The Compose service is `measure`, and live output goes to `data/runs/<UTC>/`. The README has the table.
+2. **Transaction format.** Legacy messages with `SetComputeUnitLimit` and `SetComputeUnitPrice` (`transaction_format: legacy+compute-budget`). `getBlock` uses `maxSupportedTransactionVersion: 1`.
+3. **Compute-unit limit.** 1,000 CU on every rung. A devnet probe at slot 516,359,079 consumed 450 CU, and that probe is recorded in the manifest as `excluded_from_report`.
+4. **QUIC.** `aioquic` 1.7.0 with ALPN `solana-tpu` and a self-signed client certificate. Connections open 12 slots ahead (`quic_warmup_slots`), and the burst goes out at `target_slot − 1` (`burst_offset_slots`).
+5. **Version strings.** Not parsed. `clientId` from `getClusterNodes` is the label (`measure/versions.py`), and version strings are recorded as-is. Neither run used validators.app.
+6. **Jito endpoint.** The dialed address is the gossip `tpuQuic`, recorded per attempt (`tpu_host`, `tpu_port`). No relayer hold is assumed.
+7. **Cap ledger.** Global `data/spend.json`, durable across restarts and run directories. It is reconciled to on-chain `meta.fee` after a live run (section 9.5).
+8. **Ladder length.** The conflict ladder has six rungs. The non-conflict ladder is shortened first to fit the budget, and run 4's had four. Four rungs can never reach `n ≥ 5`, so those slots are `inconclusive`.
+9. **Retries.** None inside the window (`retries_inside_window: false`). `TPU_COPIES` re-sends the same signed bytes; it does not create new signatures.
+10. **Genesis certificate.** `getAgGenesisCert` was available and matched slot 459,652,999 in run 4. The slot cutoff is enforced regardless.
+11. **Container.** Runs as non-root uid 1000. The key mount is read-only, and no secrets are in the image. Dry-run is the Compose default. Logs go to stdout, `run.log`, and `live-stderr.log`. The `report` service has no network.
+12. **Send order.** `ascending` (the default, used by both runs), `descending`, or `shuffled` (section [9.3.1](#931-collinearity-of-fee-and-send-order)). Recorded in the manifest's `design`.
 
 ## 14. Source list
 
@@ -468,7 +504,7 @@ Retrieved 29 October 2026.
 - Stake-weighted QoS: https://github.com/solana-foundation/solana-com/blob/main/apps/docs/content/guides/advanced/stake-weighted-qos.mdx
 - Fees: https://solana.com/docs/core/fees
 - Prioritization fee implementation: https://github.com/anza-xyz/agave/blob/v3.1.8/compute-budget/src/compute_budget_limits.rs
-- `getLeaderSchedule`: https://solana.com/docs/rpc/http/getleaderschedule
+- `getSlotLeaders`: https://solana.com/docs/rpc/http/getslotleaders
 - Alpenglow: https://solana.com/upgrades/alpenglow
 - Alpenglow migration: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0384-alpenglow-migration.md
 - Anza Alpenglow page: https://www.anza.xyz/alpenglow
