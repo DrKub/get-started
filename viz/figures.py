@@ -126,7 +126,12 @@ def tau_heatmap(runs: list[Run]):
     ladders = ladders_in(runs)
     if not validators:
         return _empty("no landed probes")
-    columns = [(ladder, run) for ladder in ladders for run in runs]
+    columns = [
+        (ladder, run)
+        for ladder in ladders
+        for run in runs
+        if any(ladder_summary(run, identity, ladder) for identity, _ in validators)
+    ]
     data = np.full((len(validators), len(columns)), np.nan)
     notes = [["" for _ in columns] for _ in validators]
     for r, (identity, _) in enumerate(validators):
@@ -161,8 +166,9 @@ def tau_heatmap(runs: list[Run]):
     ax.set_yticks(np.arange(-0.5, len(validators)), minor=True)
     ax.grid(which="minor", color="white", linewidth=2)
     ax.tick_params(which="minor", length=0)
-    for k in range(1, len(ladders)):
-        ax.axvline(k * len(runs) - 0.5, color=style.INK, lw=1.5)
+    for k in range(1, len(columns)):
+        if columns[k][0] != columns[k - 1][0]:
+            ax.axvline(k - 0.5, color=style.INK, lw=1.5)
     cbar = fig.colorbar(im, ax=ax, shrink=0.85, ticks=[-1, -0.5, 0, 0.5, 1])
     cbar.set_label("Kendall \u03c4-b (fee vs block index)\n\u22121 higher fee earlier · +1 higher fee later")
     cbar.outline.set_visible(False)
@@ -314,8 +320,9 @@ def send_time(runs: list[Run]):
     fig.legend(handles=handles, loc="outside lower center", ncol=len(handles))
     fig.suptitle(
         "Send order vs position in block. Every rung of a burst carries the same millisecond timestamp, so "
-        "only the order is observed, not the spacing.\nRuns 3-4 sent lowest fee first: send index = fee rank. "
-        "Falling to the right = FIFO arrival order; rising = fee order or a LIFO drain (indistinguishable here).",
+        "only the order is observed, not the spacing.\nRuns 3-4 sent lowest fee first (send index = fee rank): "
+        "falling to the right = FIFO, rising = fee order or a LIFO drain. Run 5 shuffled the send order "
+        "(|\u03c4(fee, send)| \u2264 1/3), so there colour, not x, carries the fee.",
         fontsize=9.5, x=0.01, ha="left",
     )
     return fig
@@ -419,7 +426,8 @@ FIGURES = {
     "fig4_send_time": (
         send_time,
         "Send order vs position in block for each probe burst. All rungs of a burst share one send "
-        "timestamp; in runs 3-4 send index equals fee rank, so this is not independent of fig1.",
+        "timestamp; in runs 3-4 send index equals fee rank, so those panels are not independent of fig1. "
+        "Run 5 shuffled the send order, so its panels are.",
     ),
     "fig5_cost_waterfall": (
         cost_waterfall,

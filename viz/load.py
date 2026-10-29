@@ -10,6 +10,7 @@ from pathlib import Path
 KNOWN_RUN_LABELS = {
     "20261029T094113Z": "run 3",
     "20261029T100356Z": "run 4",
+    "20261029T110321Z": "run 5 (shuffled)",
 }
 
 CLIENT_ORDER = [

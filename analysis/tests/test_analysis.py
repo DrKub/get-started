@@ -195,11 +195,11 @@ class RealRunIntegrationTests(unittest.TestCase):
             result = write_outputs(
                 data, Path(temporary), seed=20261029, replicates=200
             )
-            self.assertEqual(len(result["ladder_statistics"]), 24)
+            self.assertEqual(len(result["ladder_statistics"]), 30)
             evidence_lines = (
                 Path(temporary) / "evidence_transactions.csv"
             ).read_text().splitlines()
-            self.assertEqual(len(evidence_lines) - 1, 132)
+            self.assertEqual(len(evidence_lines) - 1, 168)
             run4_nonconflict = [
                 row
                 for row in result["ladder_statistics"]
@@ -220,8 +220,21 @@ class RealRunIntegrationTests(unittest.TestCase):
             stats = result["ladder_statistics"]
             self.assertTrue(all(row["leader_matches"] is True for row in stats))
             self.assertTrue(all(row["contaminated"] is False for row in stats))
-            self.assertEqual({row["send_order"] for row in stats}, {"ascending"})
-            self.assertEqual({row["tau_fee_send"] for row in stats}, {1.0})
+            run5 = "20261029T110321Z"
+            ascending = [row for row in stats if row["run"] != run5]
+            shuffled = [row for row in stats if row["run"] == run5]
+            self.assertEqual({row["send_order"] for row in ascending}, {"ascending"})
+            self.assertEqual({row["tau_fee_send"] for row in ascending}, {1.0})
+            self.assertEqual(len(shuffled), 6)
+            self.assertEqual({row["ladder"] for row in shuffled}, {"conflict"})
+            self.assertTrue(all(abs(row["tau_fee_send"]) <= 1 / 3 + 1e-9 for row in shuffled))
+            self.assertEqual(
+                {row["client"] for row in shuffled if row["call"] == "strict_priority"},
+                {"Agave", "Firedancer", "JitoLabs", "AgaveBam"},
+            )
+            inverse = [row for row in shuffled if row["client"] == "HarmonicFiredancer"][0]
+            self.assertAlmostEqual(inverse["tau_b"], 13 / 15)
+            self.assertEqual(inverse["call"], "no_rule_detected")
             early = sorted(
                 (row["run"], row["client"]) for row in stats if row["slot_minus_target"] != 0
             )
@@ -235,10 +248,12 @@ class RealRunIntegrationTests(unittest.TestCase):
                 if row["ladder"] == "conflict"
             }
             self.assertEqual(
-                conflict_locks, {"20261029T094113Z": 2, "20261029T100356Z": 1}
+                conflict_locks,
+                {"20261029T094113Z": 2, "20261029T100356Z": 1, "20261029T110321Z": 1},
             )
             pooled = {row["scope"]: row for row in result["pooled_pair_shares"]}
-            self.assertAlmostEqual(pooled["conflict"]["priority_pair_share"], 164 / 180)
+            self.assertAlmostEqual(pooled["conflict"]["priority_pair_share"], 237 / 270)
+            self.assertAlmostEqual(pooled["all"]["priority_pair_share"], 298 / 396)
             headline = {
                 (row["client"], row["ladder"]): row["headline_call"]
                 for row in result["validator_rollups"]

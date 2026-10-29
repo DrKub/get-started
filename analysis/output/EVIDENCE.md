@@ -451,3 +451,117 @@ stored raw block `data/runs/<run>/blocks/<slot>.json.gz`.
 | 1 | 1 | 23 | [`5WU67PsAP4aYMHUw…`](https://solscan.io/tx/5WU67PsAP4aYMHUwUKmch8MgZ3PXZm59PJSucipnUv5iSfGc7j8zS2UJH38MeribNBd5GtjPnTHygZSRDmcuBsrw) ([Explorer](https://explorer.solana.com/tx/5WU67PsAP4aYMHUwUKmch8MgZ3PXZm59PJSucipnUv5iSfGc7j8zS2UJH38MeribNBd5GtjPnTHygZSRDmcuBsrw?cluster=mainnet)) |
 | 2 | 2 | 18 | [`2NqRakrpA5VrMBWS…`](https://solscan.io/tx/2NqRakrpA5VrMBWSgMs1LgWGw8nsA3s4pPX5Y99vUPJmb2W8g91ZmRUASxyRWpXSkGErWWd3ZZhhiYhXUggWpxoU) ([Explorer](https://explorer.solana.com/tx/2NqRakrpA5VrMBWSgMs1LgWGw8nsA3s4pPX5Y99vUPJmb2W8g91ZmRUASxyRWpXSkGErWWd3ZZhhiYhXUggWpxoU?cluster=mainnet)) |
 | 3 | 4 | 19 | [`ajcctYUigquJsnGg…`](https://solscan.io/tx/ajcctYUigquJsnGg6Z4gtUpLtFN7d3FM2eRxvSVAGk5r5UC7Aasp6UmCsTTWyJzC4uJSWXAJjR3yRN6Z2Dq46rA) ([Explorer](https://explorer.solana.com/tx/ajcctYUigquJsnGg6Z4gtUpLtFN7d3FM2eRxvSVAGk5r5UC7Aasp6UmCsTTWyJzC4uJSWXAJjR3yRN6Z2Dq46rA?cluster=mainnet)) |
+
+<a id="20261029t110321z-agave-conflict"></a>
+
+## 20261029T110321Z · Agave 4.3.2 · conflict
+
+- Leader identity: `7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE`; block leader from rewards: `7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE`
+- Slot: [462857452](https://solscan.io/block/462857452) ([Explorer](https://explorer.solana.com/block/462857452?cluster=mainnet)); target slot 462857452 (landed +0)
+- n = 6, tau-b(fee, block index) = -1.000, exact one-sided p = 0.001389, call `strict_priority`
+- Send order: shuffled (tau-b(fee, send index) = +0.200)
+- Writable accounts this ladder locks: `DK9sHVjV47u2trp7tVpAeCsgdaTcGyBh8WjZLUmCCRpM`; foreign transactions writing them: 0
+
+| send index | priority fee (lamports) | block index | signature |
+| ---: | ---: | ---: | --- |
+| 0 | 0 | 28 | [`2ZRMc77VJV9LBN1u…`](https://solscan.io/tx/2ZRMc77VJV9LBN1urpPk1smqEAVB5GNTDpFJZEsQWXXbEkoia1mGxf19DL8CfcG3MnsJ9VxS6VkMsE7UFipsAJsa) ([Explorer](https://explorer.solana.com/tx/2ZRMc77VJV9LBN1urpPk1smqEAVB5GNTDpFJZEsQWXXbEkoia1mGxf19DL8CfcG3MnsJ9VxS6VkMsE7UFipsAJsa?cluster=mainnet)) |
+| 1 | 4 | 25 | [`3WzgDpvJBa51pvWf…`](https://solscan.io/tx/3WzgDpvJBa51pvWf7iCM8gpjry46AyCpL64zhbBNhbEiuEQY12Yy1gJdsFeuS8gCiptTjQg9DKu3wdmzKNTw8w31) ([Explorer](https://explorer.solana.com/tx/3WzgDpvJBa51pvWf7iCM8gpjry46AyCpL64zhbBNhbEiuEQY12Yy1gJdsFeuS8gCiptTjQg9DKu3wdmzKNTw8w31?cluster=mainnet)) |
+| 2 | 2 | 26 | [`3rPDQsA4cHCARqMN…`](https://solscan.io/tx/3rPDQsA4cHCARqMNoZDFviiG5bH3ixoBJYSdPfsyv1XokA3WLwU8HVjUt4v6M5rH42egS8cuF4sFabMp3geXmH64) ([Explorer](https://explorer.solana.com/tx/3rPDQsA4cHCARqMNoZDFviiG5bH3ixoBJYSdPfsyv1XokA3WLwU8HVjUt4v6M5rH42egS8cuF4sFabMp3geXmH64?cluster=mainnet)) |
+| 3 | 16 | 23 | [`4yALQvZ1CTEMTYJV…`](https://solscan.io/tx/4yALQvZ1CTEMTYJV61hSDguwjK9qa5czo4WFwPgAASoTeoY8ywrv5ohm5dTaBkdtBuaeB5YKpfzg6D8XBG7WEVpN) ([Explorer](https://explorer.solana.com/tx/4yALQvZ1CTEMTYJV61hSDguwjK9qa5czo4WFwPgAASoTeoY8ywrv5ohm5dTaBkdtBuaeB5YKpfzg6D8XBG7WEVpN?cluster=mainnet)) |
+| 4 | 8 | 24 | [`2Js4W21s6N4uBqpE…`](https://solscan.io/tx/2Js4W21s6N4uBqpE2XUCgjsGwaBZ54ajBiXNvSEBJ7DA2aNyyqfbaX5fkdYYYjXJLQYyut3wawdgWZDBYRz8nEMH) ([Explorer](https://explorer.solana.com/tx/2Js4W21s6N4uBqpE2XUCgjsGwaBZ54ajBiXNvSEBJ7DA2aNyyqfbaX5fkdYYYjXJLQYyut3wawdgWZDBYRz8nEMH?cluster=mainnet)) |
+| 5 | 1 | 27 | [`3yTApZH4MFXs1dW7…`](https://solscan.io/tx/3yTApZH4MFXs1dW7HoLqEAB2BMY9GJfv1pHNMkLVrwd7okALnSUDifATFu4VBgf7jTb9mnppSyd8U9niJRZKtf1Y) ([Explorer](https://explorer.solana.com/tx/3yTApZH4MFXs1dW7HoLqEAB2BMY9GJfv1pHNMkLVrwd7okALnSUDifATFu4VBgf7jTb9mnppSyd8U9niJRZKtf1Y?cluster=mainnet)) |
+
+<a id="20261029t110321z-agavebam-conflict"></a>
+
+## 20261029T110321Z · AgaveBam 4.4.0-rc.1 · conflict
+
+- Leader identity: `DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy`; block leader from rewards: `DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy`
+- Slot: [462857608](https://solscan.io/block/462857608) ([Explorer](https://explorer.solana.com/block/462857608?cluster=mainnet)); target slot 462857608 (landed +0)
+- n = 6, tau-b(fee, block index) = -1.000, exact one-sided p = 0.001389, call `strict_priority`
+- Send order: shuffled (tau-b(fee, send index) = -0.067)
+- Writable accounts this ladder locks: `DK9sHVjV47u2trp7tVpAeCsgdaTcGyBh8WjZLUmCCRpM`; foreign transactions writing them: 0
+
+| send index | priority fee (lamports) | block index | signature |
+| ---: | ---: | ---: | --- |
+| 0 | 8 | 42 | [`5j9wLpypADGxzkNU…`](https://solscan.io/tx/5j9wLpypADGxzkNU5bQfMkeVTrSP5upbSBLSHeimKJaPbkM8BchoyEpfFkrVfPZJMBxwsHRXV9vqDMUG67ftiJnW) ([Explorer](https://explorer.solana.com/tx/5j9wLpypADGxzkNU5bQfMkeVTrSP5upbSBLSHeimKJaPbkM8BchoyEpfFkrVfPZJMBxwsHRXV9vqDMUG67ftiJnW?cluster=mainnet)) |
+| 1 | 2 | 46 | [`67MEacwGK9HdjBaG…`](https://solscan.io/tx/67MEacwGK9HdjBaGcqe3Hh28FD3SjrB5Xh7NTLzV4RH9ozqUVugdjbLEyMMwR3KajJCUgoQ9W56fWVXdAyfz5TNh) ([Explorer](https://explorer.solana.com/tx/67MEacwGK9HdjBaGcqe3Hh28FD3SjrB5Xh7NTLzV4RH9ozqUVugdjbLEyMMwR3KajJCUgoQ9W56fWVXdAyfz5TNh?cluster=mainnet)) |
+| 2 | 1 | 47 | [`2Yb7atdRp8o15zP2…`](https://solscan.io/tx/2Yb7atdRp8o15zP2BunLaHZjgXNBb3ArAaTpTMGqSiUaHK7qcEXQomq6whNdrqDg41C6KvTkwpCBFELpSbnsFSvC) ([Explorer](https://explorer.solana.com/tx/2Yb7atdRp8o15zP2BunLaHZjgXNBb3ArAaTpTMGqSiUaHK7qcEXQomq6whNdrqDg41C6KvTkwpCBFELpSbnsFSvC?cluster=mainnet)) |
+| 3 | 4 | 45 | [`5v973xt7CuypvsAj…`](https://solscan.io/tx/5v973xt7CuypvsAjkD3hJ4EkeZdWdYErUsTQH76WPVPLtPnYhYdHKLBNQ3f6i4rEMrVBmHsbF3LbQCYRfTrz2z1e) ([Explorer](https://explorer.solana.com/tx/5v973xt7CuypvsAjkD3hJ4EkeZdWdYErUsTQH76WPVPLtPnYhYdHKLBNQ3f6i4rEMrVBmHsbF3LbQCYRfTrz2z1e?cluster=mainnet)) |
+| 4 | 0 | 48 | [`2EUQxRRBFYf89d3N…`](https://solscan.io/tx/2EUQxRRBFYf89d3NpvzykLFjWuushVe5cQpXLoE3Rs1ZYTXHEUvs2uHTRbsJTjhRFYEkGpjJfvdTVvYqwC276e2E) ([Explorer](https://explorer.solana.com/tx/2EUQxRRBFYf89d3NpvzykLFjWuushVe5cQpXLoE3Rs1ZYTXHEUvs2uHTRbsJTjhRFYEkGpjJfvdTVvYqwC276e2E?cluster=mainnet)) |
+| 5 | 16 | 41 | [`2P4jbfS7BEwCKyZa…`](https://solscan.io/tx/2P4jbfS7BEwCKyZa52Zg3xXywD9fStM63MxMTxFYdi5HxBUjXgzrY4Vob5GME28GXYCMHYYtkZirCS1nm8gSuBX3) ([Explorer](https://explorer.solana.com/tx/2P4jbfS7BEwCKyZa52Zg3xXywD9fStM63MxMTxFYdi5HxBUjXgzrY4Vob5GME28GXYCMHYYtkZirCS1nm8gSuBX3?cluster=mainnet)) |
+
+<a id="20261029t110321z-firedancer-conflict"></a>
+
+## 20261029T110321Z · Firedancer 26.10.4 · conflict
+
+- Leader identity: `9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY`; block leader from rewards: `9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY`
+- Slot: [462857544](https://solscan.io/block/462857544) ([Explorer](https://explorer.solana.com/block/462857544?cluster=mainnet)); target slot 462857544 (landed +0)
+- n = 6, tau-b(fee, block index) = -1.000, exact one-sided p = 0.001389, call `strict_priority`
+- Send order: shuffled (tau-b(fee, send index) = -0.200)
+- Writable accounts this ladder locks: `DK9sHVjV47u2trp7tVpAeCsgdaTcGyBh8WjZLUmCCRpM`; foreign transactions writing them: 0
+
+| send index | priority fee (lamports) | block index | signature |
+| ---: | ---: | ---: | --- |
+| 0 | 4 | 12 | [`4gxoNp8Ph7syuRTe…`](https://solscan.io/tx/4gxoNp8Ph7syuRTewam2i7JtsZWYcNQqpyQ4tgaDB1A4ZuQkqe6VEJueFe4DHcG5Cf1ukdWEj2hwaxxBnXFAfHRX) ([Explorer](https://explorer.solana.com/tx/4gxoNp8Ph7syuRTewam2i7JtsZWYcNQqpyQ4tgaDB1A4ZuQkqe6VEJueFe4DHcG5Cf1ukdWEj2hwaxxBnXFAfHRX?cluster=mainnet)) |
+| 1 | 1 | 16 | [`2yFYt3AEzSfP5xpu…`](https://solscan.io/tx/2yFYt3AEzSfP5xpuUF3Hp51LzjMif2VgN1sSyeUG5hr6bNwvNxhipLEZsZSyJ78qq9TVKi1MqZFahHA78dt3jXyE) ([Explorer](https://explorer.solana.com/tx/2yFYt3AEzSfP5xpuUF3Hp51LzjMif2VgN1sSyeUG5hr6bNwvNxhipLEZsZSyJ78qq9TVKi1MqZFahHA78dt3jXyE?cluster=mainnet)) |
+| 2 | 16 | 5 | [`ZdiYMQdgqrpm5SCw…`](https://solscan.io/tx/ZdiYMQdgqrpm5SCwTm5hi4muDEA3cvbdaWfsBCGRpMReoGHEjF69JsgD5vg1Qn3z51uBRXqMuUcpPTjmG1qJ9R9) ([Explorer](https://explorer.solana.com/tx/ZdiYMQdgqrpm5SCwTm5hi4muDEA3cvbdaWfsBCGRpMReoGHEjF69JsgD5vg1Qn3z51uBRXqMuUcpPTjmG1qJ9R9?cluster=mainnet)) |
+| 3 | 2 | 13 | [`ZprDAywkdo48Tqta…`](https://solscan.io/tx/ZprDAywkdo48Tqtan4cQvGBLF5Q2nDkDnSR6xbpUGbZ7x8Aqjfr3BPMUBE1FLu48NhbH5Ttny9kVZVWS8Kvu392) ([Explorer](https://explorer.solana.com/tx/ZprDAywkdo48Tqtan4cQvGBLF5Q2nDkDnSR6xbpUGbZ7x8Aqjfr3BPMUBE1FLu48NhbH5Ttny9kVZVWS8Kvu392?cluster=mainnet)) |
+| 4 | 8 | 10 | [`4Rc5JbQByPSuu3vD…`](https://solscan.io/tx/4Rc5JbQByPSuu3vDW2Ggy9AYmtrfmUGwe711V7nWDeftmZ42YKSogW9zqCKaBrtrDSWcSb9JkTgkapN3bKsxNtBR) ([Explorer](https://explorer.solana.com/tx/4Rc5JbQByPSuu3vDW2Ggy9AYmtrfmUGwe711V7nWDeftmZ42YKSogW9zqCKaBrtrDSWcSb9JkTgkapN3bKsxNtBR?cluster=mainnet)) |
+| 5 | 0 | 18 | [`63pEC5qorGNLTRN6…`](https://solscan.io/tx/63pEC5qorGNLTRN6BDj5nkEJftooVgk7QfRe679prwMnLswqLJMQTRjoGNmMgenjLt2ezx4vaFZUSWXBLBtX63Ak) ([Explorer](https://explorer.solana.com/tx/63pEC5qorGNLTRN6BDj5nkEJftooVgk7QfRe679prwMnLswqLJMQTRjoGNmMgenjLt2ezx4vaFZUSWXBLBtX63Ak?cluster=mainnet)) |
+
+<a id="20261029t110321z-harmonicagave-conflict"></a>
+
+## 20261029T110321Z · HarmonicAgave 4.3.2 · conflict
+
+- Leader identity: `Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk`; block leader from rewards: `Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk`
+- Slot: [462857432](https://solscan.io/block/462857432) ([Explorer](https://explorer.solana.com/block/462857432?cluster=mainnet)); target slot 462857432 (landed +0)
+- n = 6, tau-b(fee, block index) = -0.600, exact one-sided p = 0.068056, call `no_rule_detected`
+- Send order: shuffled (tau-b(fee, send index) = +0.333)
+- Writable accounts this ladder locks: `DK9sHVjV47u2trp7tVpAeCsgdaTcGyBh8WjZLUmCCRpM`; foreign transactions writing them: 0
+
+| send index | priority fee (lamports) | block index | signature |
+| ---: | ---: | ---: | --- |
+| 0 | 2 | 140 | [`iwj8SNesExE5SYDB…`](https://solscan.io/tx/iwj8SNesExE5SYDBxU1CRWsRgm1GPuuTA5Xgar8eJkSKR4MLYERsr2vCMgd3qRsF7zaJkgCGGaxjG2Q4vLJ7coQ) ([Explorer](https://explorer.solana.com/tx/iwj8SNesExE5SYDBxU1CRWsRgm1GPuuTA5Xgar8eJkSKR4MLYERsr2vCMgd3qRsF7zaJkgCGGaxjG2Q4vLJ7coQ?cluster=mainnet)) |
+| 1 | 0 | 126 | [`4HctADzYJMmMhroC…`](https://solscan.io/tx/4HctADzYJMmMhroCJxA1xtzvzcSSLmQGLRxPgrgY8dkHdKy1sk8tXVXF3U5NxcxrGDw7R81ACR3fPCuzSH27J4R2) ([Explorer](https://explorer.solana.com/tx/4HctADzYJMmMhroCJxA1xtzvzcSSLmQGLRxPgrgY8dkHdKy1sk8tXVXF3U5NxcxrGDw7R81ACR3fPCuzSH27J4R2?cluster=mainnet)) |
+| 2 | 8 | 121 | [`5kqKUmpvfpXTu58Z…`](https://solscan.io/tx/5kqKUmpvfpXTu58Z6mM9dpYX9hmSvn6W6Ay9WSTRQ1jQ97RcwXwVcS2WSrNAjYa6dVfoy2d9TLgvZPphWBJ1uAXy) ([Explorer](https://explorer.solana.com/tx/5kqKUmpvfpXTu58Z6mM9dpYX9hmSvn6W6Ay9WSTRQ1jQ97RcwXwVcS2WSrNAjYa6dVfoy2d9TLgvZPphWBJ1uAXy?cluster=mainnet)) |
+| 3 | 1 | 123 | [`4QopK1oqDdcnpwZj…`](https://solscan.io/tx/4QopK1oqDdcnpwZj99Kczd3SJinDPcHwB5epBKcsAAQ4euLsKBX6TgruTmTLJuQ3EYEWeiq2boTq7WMWNY8K5moB) ([Explorer](https://explorer.solana.com/tx/4QopK1oqDdcnpwZj99Kczd3SJinDPcHwB5epBKcsAAQ4euLsKBX6TgruTmTLJuQ3EYEWeiq2boTq7WMWNY8K5moB?cluster=mainnet)) |
+| 4 | 16 | 118 | [`nGM2JYPAyRJ8Axb8…`](https://solscan.io/tx/nGM2JYPAyRJ8Axb8sQyor8H92iq8TbSQC2fiRDaYfRiLBtne1rUEoVMnGhVmpXCJuLMfMLM3gNAAUZFks2jrJHV) ([Explorer](https://explorer.solana.com/tx/nGM2JYPAyRJ8Axb8sQyor8H92iq8TbSQC2fiRDaYfRiLBtne1rUEoVMnGhVmpXCJuLMfMLM3gNAAUZFks2jrJHV?cluster=mainnet)) |
+| 5 | 4 | 125 | [`jwJA6xJTZYFG4iie…`](https://solscan.io/tx/jwJA6xJTZYFG4iiekMzPvvr7JbaHWG5QDwncJCGD5YsXJdqhzzkHzCFE1jXJ4UN3SjmbvbLLt6WEtkNBdC87iXy) ([Explorer](https://explorer.solana.com/tx/jwJA6xJTZYFG4iiekMzPvvr7JbaHWG5QDwncJCGD5YsXJdqhzzkHzCFE1jXJ4UN3SjmbvbLLt6WEtkNBdC87iXy?cluster=mainnet)) |
+
+<a id="20261029t110321z-harmonicfiredancer-conflict"></a>
+
+## 20261029T110321Z · HarmonicFiredancer 26.10.4 · conflict
+
+- Leader identity: `JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b`; block leader from rewards: `JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b`
+- Slot: [462857824](https://solscan.io/block/462857824) ([Explorer](https://explorer.solana.com/block/462857824?cluster=mainnet)); target slot 462857824 (landed +0)
+- n = 6, tau-b(fee, block index) = +0.867, exact one-sided p = 0.008333, call `no_rule_detected`
+- Send order: shuffled (tau-b(fee, send index) = +0.067)
+- Writable accounts this ladder locks: `DK9sHVjV47u2trp7tVpAeCsgdaTcGyBh8WjZLUmCCRpM`; foreign transactions writing them: 0
+
+| send index | priority fee (lamports) | block index | signature |
+| ---: | ---: | ---: | --- |
+| 0 | 1 | 56 | [`61cKY6dEvXuzFhKd…`](https://solscan.io/tx/61cKY6dEvXuzFhKduz5KFC6KWimh1BETzjiNaeuoMArumr4WH3jWAEXiQfT1nnJHrrZhMsaXM3Ak83TxgHFb1BYu) ([Explorer](https://explorer.solana.com/tx/61cKY6dEvXuzFhKduz5KFC6KWimh1BETzjiNaeuoMArumr4WH3jWAEXiQfT1nnJHrrZhMsaXM3Ak83TxgHFb1BYu?cluster=mainnet)) |
+| 1 | 4 | 66 | [`oCuvofGMZ57ka9xA…`](https://solscan.io/tx/oCuvofGMZ57ka9xAJFXwnbA9yrrnzUoeGqqYaswmpvepeBF86qj25qPLK1KT4U3GR4kXWzTZARLYoZ81R2RM4ZU) ([Explorer](https://explorer.solana.com/tx/oCuvofGMZ57ka9xAJFXwnbA9yrrnzUoeGqqYaswmpvepeBF86qj25qPLK1KT4U3GR4kXWzTZARLYoZ81R2RM4ZU?cluster=mainnet)) |
+| 2 | 8 | 70 | [`q1J9k31M5PyPobwU…`](https://solscan.io/tx/q1J9k31M5PyPobwUVcHusDxRkhy4D3RvdyQWhNf47xUCamUopj5A9EJ5RjqwkkBPo8vZFK2LMnazPF8eyKTbF2b) ([Explorer](https://explorer.solana.com/tx/q1J9k31M5PyPobwUVcHusDxRkhy4D3RvdyQWhNf47xUCamUopj5A9EJ5RjqwkkBPo8vZFK2LMnazPF8eyKTbF2b?cluster=mainnet)) |
+| 3 | 2 | 69 | [`2ZdWp4AfaMNUDWAx…`](https://solscan.io/tx/2ZdWp4AfaMNUDWAxenaKWgGe81cNa1genNS7NycdFM4HraK5ADgFEeMqt52sdqQw8iWbv42BWeNxoRigj5ZDGhdp) ([Explorer](https://explorer.solana.com/tx/2ZdWp4AfaMNUDWAxenaKWgGe81cNa1genNS7NycdFM4HraK5ADgFEeMqt52sdqQw8iWbv42BWeNxoRigj5ZDGhdp?cluster=mainnet)) |
+| 4 | 16 | 123 | [`4PNQMBGeQQ75TcGF…`](https://solscan.io/tx/4PNQMBGeQQ75TcGFVvn6F2J2Ly1FebPcvjG6najf6t1ifDfkHKENqQ7eNF1P9MaGzbgfVU6GeHWmjuFkJ8G4vkuR) ([Explorer](https://explorer.solana.com/tx/4PNQMBGeQQ75TcGFVvn6F2J2Ly1FebPcvjG6najf6t1ifDfkHKENqQ7eNF1P9MaGzbgfVU6GeHWmjuFkJ8G4vkuR?cluster=mainnet)) |
+| 5 | 0 | 52 | [`iQzVoaRA2iLGHCPX…`](https://solscan.io/tx/iQzVoaRA2iLGHCPXNJvhU83beZNmUHUsPXdNLUMAkMJprZNyVMMnjH6SgPKoFLzUovmgbwBafZ1TG45KFwQg5y5) ([Explorer](https://explorer.solana.com/tx/iQzVoaRA2iLGHCPXNJvhU83beZNmUHUsPXdNLUMAkMJprZNyVMMnjH6SgPKoFLzUovmgbwBafZ1TG45KFwQg5y5?cluster=mainnet)) |
+
+<a id="20261029t110321z-jitolabs-conflict"></a>
+
+## 20261029T110321Z · JitoLabs 4.3.2 · conflict
+
+- Leader identity: `HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU`; block leader from rewards: `HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU`
+- Slot: [462857372](https://solscan.io/block/462857372) ([Explorer](https://explorer.solana.com/block/462857372?cluster=mainnet)); target slot 462857372 (landed +0)
+- n = 6, tau-b(fee, block index) = -1.000, exact one-sided p = 0.001389, call `strict_priority`
+- Send order: shuffled (tau-b(fee, send index) = -0.333)
+- Writable accounts this ladder locks: `DK9sHVjV47u2trp7tVpAeCsgdaTcGyBh8WjZLUmCCRpM`; foreign transactions writing them: 0
+
+| send index | priority fee (lamports) | block index | signature |
+| ---: | ---: | ---: | --- |
+| 0 | 8 | 3 | [`4JSDuk63TQmhibCr…`](https://solscan.io/tx/4JSDuk63TQmhibCrKY1vVgVz3KPnhtyjjcMqQtCndd4JPjmx5pp5GBubn7MjkH3GRwpqtuMKPCeijxnLxUfukcr8) ([Explorer](https://explorer.solana.com/tx/4JSDuk63TQmhibCrKY1vVgVz3KPnhtyjjcMqQtCndd4JPjmx5pp5GBubn7MjkH3GRwpqtuMKPCeijxnLxUfukcr8?cluster=mainnet)) |
+| 1 | 2 | 5 | [`4WZ36skc9FE3FoTV…`](https://solscan.io/tx/4WZ36skc9FE3FoTVmAvNDMBFHDBxVEPG9SgUVQApQkUwBeYv5MhEUPh6mWsMHAcVR3xsMmuM5fP9MAXti7ZZv7JN) ([Explorer](https://explorer.solana.com/tx/4WZ36skc9FE3FoTVmAvNDMBFHDBxVEPG9SgUVQApQkUwBeYv5MhEUPh6mWsMHAcVR3xsMmuM5fP9MAXti7ZZv7JN?cluster=mainnet)) |
+| 2 | 4 | 4 | [`s1RQbm4imf8VagsZ…`](https://solscan.io/tx/s1RQbm4imf8VagsZ81hwWya1TDCWM7hcuDwJKXpEacEPS9PH3wyRZYFmmfciwAkZN5xxQeKa6Q8vULrF3mfkFXe) ([Explorer](https://explorer.solana.com/tx/s1RQbm4imf8VagsZ81hwWya1TDCWM7hcuDwJKXpEacEPS9PH3wyRZYFmmfciwAkZN5xxQeKa6Q8vULrF3mfkFXe?cluster=mainnet)) |
+| 3 | 1 | 6 | [`rb8iDjZkHJ3JdPjc…`](https://solscan.io/tx/rb8iDjZkHJ3JdPjcbV6xCVgLXGyNzNG57VCZeEbXxxhLFRwBhxpBZnf7Y1CWNSD7utsVT3oQ7QXuhukZhqRAEZD) ([Explorer](https://explorer.solana.com/tx/rb8iDjZkHJ3JdPjcbV6xCVgLXGyNzNG57VCZeEbXxxhLFRwBhxpBZnf7Y1CWNSD7utsVT3oQ7QXuhukZhqRAEZD?cluster=mainnet)) |
+| 4 | 16 | 2 | [`3JMN1q9HXLcG8fSn…`](https://solscan.io/tx/3JMN1q9HXLcG8fSnhnsqRJSJ7eFhio2XJaSg1nfSqSJvdRWm79PEjrkZ4s3bbUo8NjZFooCDWiHMcCbSsAGPPZzk) ([Explorer](https://explorer.solana.com/tx/3JMN1q9HXLcG8fSnhnsqRJSJ7eFhio2XJaSg1nfSqSJvdRWm79PEjrkZ4s3bbUo8NjZFooCDWiHMcCbSsAGPPZzk?cluster=mainnet)) |
+| 5 | 0 | 7 | [`5NDLubNXJTjzjbPS…`](https://solscan.io/tx/5NDLubNXJTjzjbPS5Zuy6VxHBr6mgcuoR4c3Tg7jVFPfQ9RcrtrXnemS35gWhnMzX5P1TfEwmDKpgY2bfCmkZFhF) ([Explorer](https://explorer.solana.com/tx/5NDLubNXJTjzjbPS5Zuy6VxHBr6mgcuoR4c3Tg7jVFPfQ9RcrtrXnemS35gWhnMzX5P1TfEwmDKpgY2bfCmkZFhF?cluster=mainnet)) |

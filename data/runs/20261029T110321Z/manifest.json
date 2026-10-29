@@ -1,0 +1,268 @@
+{
+  "alpenglow": {
+    "activation_epoch": 1064,
+    "activation_utc": "2026-10-21T13:36:00Z",
+    "observed_epoch": 1071,
+    "regime": "after",
+    "regime_ok": true,
+    "source": "https://solana.com/upgrades/alpenglow"
+  },
+  "alpenglow_cutoff_slot": 459653000,
+  "block_time": 1793271798,
+  "blockhash": "FXePFwE84D3ECVVsBqv7UWsqcycAGNinGsHaJBLLfR7c",
+  "burst_offset_slots": 1,
+  "client_families": [
+    "firedancer",
+    "jito-solana",
+    "agave",
+    "harmonic-firedancer",
+    "harmonic-agave",
+    "agave-bam"
+  ],
+  "client_ids": [
+    "Firedancer",
+    "JitoLabs",
+    "Agave",
+    "HarmonicFiredancer",
+    "HarmonicAgave",
+    "AgaveBam"
+  ],
+  "cu_limit": 1000,
+  "cu_limit_probe": {
+    "excluded_from_report": true,
+    "network": "devnet",
+    "probed_at": "2026-10-29",
+    "slot": 516359079,
+    "units_consumed": 450
+  },
+  "design": {
+    "conflict_rungs": [
+      0,
+      1,
+      2,
+      4,
+      8,
+      16
+    ],
+    "fee_rungs_lamports": [
+      0,
+      1,
+      2,
+      4,
+      8,
+      16
+    ],
+    "funding_submit_path": "rpc+tpu-fanout",
+    "jito_bundles": "out_of_scope",
+    "ladders": "conflict",
+    "nonconflict_rungs": [],
+    "primary_evidence": "self_sent_signatures",
+    "retries_inside_window": false,
+    "send_order": "shuffled",
+    "send_order_seed": 3763027240,
+    "submit_path": "tpu",
+    "transmission_order": "seeded permutation per leader and ladder"
+  },
+  "epoch": 1071,
+  "exclusion_counts": {
+    "leader_not_in_cluster_nodes": 1,
+    "no_eligible_window": 2,
+    "unknown_client_id": 1
+  },
+  "experiment_id": "e1071-20261029T110321Z",
+  "fetched_at": "2026-10-29T11:03:21Z",
+  "genesis_certificate": {
+    "available": true,
+    "matches_expected": true,
+    "slot": 459652999
+  },
+  "git_sha": "c8f4d898ad80488933ce3b3599b0f55943a4af02",
+  "lookahead_slots": 16000,
+  "max_supported_transaction_version": 1,
+  "min_lead_slots": 150,
+  "mode": "live",
+  "notes": [
+    "conflict ladder only: no non-conflict payers, no funding, no rent"
+  ],
+  "observed_slot": 462857206,
+  "permutation_seed": 0,
+  "quic_warmup_slots": 12,
+  "regime": "after",
+  "rpc_url": "https://mainnet.helius-rpc.com/",
+  "run_dir": "/workspace/itb/data/runs/20261029T110321Z",
+  "schedule_start_slot": 462857195,
+  "selection_ok": true,
+  "selection_reason": null,
+  "slot_index": 185195,
+  "slots_in_epoch": 432000,
+  "source": "rpc",
+  "spend": {
+    "cap_lamports": 1260600,
+    "cap_sol": "0.001260600",
+    "hard_cap_lamports": 50000000,
+    "net_lamports": 180186,
+    "net_sol": "0.000180186",
+    "peak_lamports": 180186,
+    "peak_sol": "0.000180186",
+    "planned_fee_lamports": 180186,
+    "planned_fee_sol": "0.000180186",
+    "temporary_rent_lamports": 0
+  },
+  "targets": [
+    {
+      "active_stake_lamports": 6646427909604945,
+      "assigned_windows": [
+        {
+          "length": 4,
+          "partial": false,
+          "path": "tpu",
+          "repeat_index": 0,
+          "start_slot": 462857544
+        }
+      ],
+      "classification_source": "rpc",
+      "client_family": "firedancer",
+      "client_id": "Firedancer",
+      "feature_set": 1766517360,
+      "gossip": "86.54.152.246:8001",
+      "identity": "9eGrDohdNTAo61DRHyfMuqKWXqYnA3i254Wiszxe8FoY",
+      "jito": null,
+      "outside_top10_stake": false,
+      "tpu_quic": "86.54.152.246:9007",
+      "version": "26.10.4",
+      "vote_account": "CvSb7wdQAFpHuSpTYTJnX5SYH4hCfQ9VuGnqrKaKwycB",
+      "windows_available": 70
+    },
+    {
+      "active_stake_lamports": 16665444377046747,
+      "assigned_windows": [
+        {
+          "length": 4,
+          "partial": false,
+          "path": "tpu",
+          "repeat_index": 0,
+          "start_slot": 462857372
+        }
+      ],
+      "classification_source": "rpc",
+      "client_family": "jito-solana",
+      "client_id": "JitoLabs",
+      "feature_set": 3383571666,
+      "gossip": "64.130.57.215:8001",
+      "identity": "HEL1USMZKAL2odpNBj2oCjffnFGaYwmbGmyewGv1e2TU",
+      "jito": null,
+      "outside_top10_stake": false,
+      "tpu_quic": "64.130.57.215:8002",
+      "version": "4.3.2",
+      "vote_account": "he1iusunGwqrNtafDtLdhsUQDFvo13z9sUa36PauBtk",
+      "windows_available": 148
+    },
+    {
+      "active_stake_lamports": 1875001953466200,
+      "assigned_windows": [
+        {
+          "length": 4,
+          "partial": false,
+          "path": "tpu",
+          "repeat_index": 0,
+          "start_slot": 462857452
+        }
+      ],
+      "classification_source": "rpc",
+      "client_family": "agave",
+      "client_id": "Agave",
+      "feature_set": 3383571666,
+      "gossip": "5.199.172.176:12000",
+      "identity": "7QQGNm3ptwinipDCyaCF7jY5katgmFUu1ieP2f7nwLpE",
+      "jito": null,
+      "outside_top10_stake": true,
+      "tpu_quic": "5.199.172.176:12002",
+      "version": "4.3.2",
+      "vote_account": "8BMMDVM8Tb88a2Hx1VSZ1TKmH1rMHbVU7xVafMk9JrEW",
+      "windows_available": 19
+    },
+    {
+      "active_stake_lamports": 9705355838241380,
+      "assigned_windows": [
+        {
+          "length": 4,
+          "partial": false,
+          "path": "tpu",
+          "repeat_index": 0,
+          "start_slot": 462857824
+        }
+      ],
+      "classification_source": "rpc",
+      "client_family": "harmonic-firedancer",
+      "client_id": "HarmonicFiredancer",
+      "feature_set": 1766517360,
+      "gossip": "88.216.36.133:8001",
+      "identity": "JUPiTERrZqgf1jUyR7dSkhMx4Kn2qJyekWsg3LT1h4b",
+      "jito": null,
+      "outside_top10_stake": false,
+      "tpu_quic": "198.13.140.105:12349",
+      "version": "26.10.4",
+      "vote_account": "CatzoSMUkTRidT5DwBxAC2pEtnwMBTpkCepHkFgZDiqb",
+      "windows_available": 82
+    },
+    {
+      "active_stake_lamports": 17028574244749148,
+      "assigned_windows": [
+        {
+          "length": 4,
+          "partial": false,
+          "path": "tpu",
+          "repeat_index": 0,
+          "start_slot": 462857432
+        }
+      ],
+      "classification_source": "rpc",
+      "client_family": "harmonic-agave",
+      "client_id": "HarmonicAgave",
+      "feature_set": 3383571666,
+      "gossip": "141.95.45.24:8001",
+      "identity": "Fd7btgySsrjuo25CJCj7oE7VPMyezDhnx7pZkj2v69Nk",
+      "jito": null,
+      "outside_top10_stake": false,
+      "tpu_quic": "198.13.140.105:12341",
+      "version": "4.3.2",
+      "vote_account": "CcaHc2L43ZWjwCHART3oZoJvHLAe9hzT2DJNUpBzoTN1",
+      "windows_available": 145
+    },
+    {
+      "active_stake_lamports": 12878826062976823,
+      "assigned_windows": [
+        {
+          "length": 4,
+          "partial": false,
+          "path": "tpu",
+          "repeat_index": 0,
+          "start_slot": 462857608
+        }
+      ],
+      "classification_source": "rpc",
+      "client_family": "agave-bam",
+      "client_id": "AgaveBam",
+      "feature_set": 3993424257,
+      "gossip": "67.202.63.79:8000",
+      "identity": "DRpbCBMxVnDK7maPM5tGv6MvB3v1sRMC86PZ8okm21hy",
+      "jito": null,
+      "outside_top10_stake": false,
+      "tpu_quic": "208.91.105.53:5010",
+      "version": "4.4.0-rc.1",
+      "vote_account": "3N7s9zXMZ4QqvHQR15t5GNHyqc89KduzMP7423eWiD5g",
+      "windows_available": 116
+    }
+  ],
+  "transaction_format": "legacy+compute-budget",
+  "version_strings": [
+    "26.10.4",
+    "4.3.2",
+    "4.3.2",
+    "26.10.4",
+    "4.3.2",
+    "4.4.0-rc.1"
+  ],
+  "warnings": [],
+  "ws_url": "wss://mainnet.helius-rpc.com/"
+}
