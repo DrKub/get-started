@@ -62,6 +62,7 @@ class Config:
     timeout_s: float
     validators_app_token: str | None
     ws_url: str | None = None
+    tpu_copies: int = 1
 
     @property
     def spend_cap_sol(self) -> str:
@@ -95,6 +96,7 @@ def config_from_env() -> dict:
         "validators_app_token": _env("VALIDATORS_APP_TOKEN"),
         "mode": (_env("MODE") or "").lower(),
         "ws_url": _env("WS_URL"),
+        "tpu_copies": _positive_int("TPU_COPIES", _env("TPU_COPIES") or "1"),
     }
 
 
@@ -133,6 +135,7 @@ def make_config(
     live: bool = False,
     collect: bool = False,
     timeout_s: float | None = None,
+    tpu_copies: int | None = None,
 ) -> Config:
     env = config_from_env()
     cap = resolve_spend_cap(spend_cap_sol or env["spend_cap_sol"])
@@ -159,6 +162,7 @@ def make_config(
         timeout_s=timeout_s if timeout_s is not None else env["timeout_s"],
         validators_app_token=env["validators_app_token"],
         ws_url=env["ws_url"],
+        tpu_copies=env["tpu_copies"] if tpu_copies is None else tpu_copies,
     )
     _validate(config)
     return config
@@ -179,6 +183,8 @@ def _validate(config: Config) -> None:
         raise ConfigError("LEADER_PAGE must be between 1 and 5000")
     if config.spend_cap_lamports > DEFAULT_CAP_LAMPORTS:
         raise ConfigError("spend cap exceeds 0.05 SOL")
+    if config.tpu_copies < 1 or config.tpu_copies > 4:
+        raise ConfigError("TPU_COPIES must be between 1 and 4")
     if config.ws_url is not None and not config.ws_url.startswith(("ws://", "wss://")):
         raise ConfigError("WS_URL must start with ws:// or wss://")
     if config.experiment_id is not None:

@@ -111,8 +111,9 @@ class TpuPool:
         """Open ``destination`` and return the handshake time in seconds."""
         return float(self._run(self._warm(destination), timeout=12))
 
-    def send(self, destination: str, payloads: list[bytes], *, copies: int = 1) -> None:
-        self._run(self._send(destination, payloads, copies), timeout=15)
+    def send(self, destination: str, payloads: list[bytes], *, copies: int = 1) -> list[int]:
+        """Write the burst ``copies`` times. Returns one unix-ms timestamp per copy."""
+        return list(self._run(self._send(destination, payloads, copies), timeout=15))
 
     def close(self) -> None:
         try:
@@ -154,7 +155,9 @@ class TpuPool:
         except Exception:
             pass
 
-    async def _send(self, destination: str, payloads: list[bytes], copies: int) -> None:
+    async def _send(self, destination: str, payloads: list[bytes], copies: int) -> list[int]:
+        import time as _time
+
         if destination not in self._open:
             await self._warm(destination)
         _manager, protocol = self._open[destination]
@@ -163,6 +166,7 @@ class TpuPool:
             await self._warm(destination)
             _manager, protocol = self._open[destination]
         transmitted = False
+        stamps: list[int] = []
         for _copy in range(max(1, copies)):
             for payload in payloads:
                 _reader, writer = await asyncio.wait_for(
@@ -173,12 +177,16 @@ class TpuPool:
                 writer.write_eof()
                 await writer.drain()
                 transmitted = True
-        protocol.transmit()
-        await asyncio.sleep(0.2)
+            protocol.transmit()
+            stamps.append(int(_time.time() * 1000))
+        await asyncio.sleep(0.05)
         late = peer_close_error(protocol)
         if late:
+            error = TpuSendError(late, transmitted=transmitted)
+            error.copy_send_unix_ms = stamps  # type: ignore[attr-defined]
             await self._drop(destination)
-            raise TpuSendError(late, transmitted=transmitted)
+            raise error
+        return stamps
 
     async def _close_all(self) -> None:
         for destination in list(self._open):

@@ -42,6 +42,12 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--min-lead-slots", type=int, default=None)
     run.add_argument("--target-validators", type=int, default=None)
     run.add_argument("--experiment-id", default=None)
+    run.add_argument(
+        "--tpu-copies",
+        type=int,
+        default=None,
+        help="how many times to write each probe burst to that leader's TPU (default 1)",
+    )
 
     key = sub.add_parser("key", help="print a keypair's public key and balance; do not send")
     key.add_argument("--keypair", default=None)
@@ -73,6 +79,12 @@ def build_parser() -> argparse.ArgumentParser:
     parse_block.add_argument("--file", required=True)
     parse_block.add_argument("--slot", required=True, type=int)
     parse_block.add_argument("--output-dir", default="data/raw")
+
+    sweep = sub.add_parser("sweep", help="return probe-account rent to the funder")
+    sweep.add_argument("--keypair", default=None, help="funder keypair; default KEYPAIR_PATH")
+    sweep.add_argument("--keys-dir", default=None, help="directory of probe keypairs")
+    sweep.add_argument("--rpc-url", default=None)
+    sweep.add_argument("--data-dir", default=None)
     return parser
 
 
@@ -101,6 +113,8 @@ def main(argv: list[str] | None = None) -> int:
 def _dispatch(args: argparse.Namespace) -> int:
     if args.command == "key":
         return _key(args)
+    if args.command == "sweep":
+        return _sweep(args)
     if args.command == "ledger":
         return _ledger(args)
     if args.command == "parse-block":
@@ -127,6 +141,7 @@ def _dispatch(args: argparse.Namespace) -> int:
         fixture_dir=args.fixture_dir,
         live=bool(args.live),
         collect=bool(args.collect),
+        tpu_copies=args.tpu_copies,
     )
     return run_measure(config)
 
@@ -177,7 +192,7 @@ def _reconcile_on_chain(args, ledger, attempts_path: Path, rows: list[dict]) -> 
     import os
 
     from measure.errors import RpcError
-    from measure.ledger import group_attempts, landed_fee_lamports
+    from measure.ledger import group_attempts
     from measure.rpc import RpcClient
 
     manifest_id = None
@@ -197,28 +212,23 @@ def _reconcile_on_chain(args, ledger, attempts_path: Path, rows: list[dict]) -> 
     prepared = []
     try:
         for run_id, group in groups.items():
+            from measure.fees import meta_fee
+
             submitted = [row for row in group if row.get("submitted") and row.get("signature")]
-            signatures = [str(row["signature"]) for row in submitted]
-            statuses: list = []
+            landed = 0
+            landed_n = 0
             try:
-                for start in range(0, len(signatures), 64):
-                    statuses.extend(
-                        rpc.get_signature_statuses(signatures[start : start + 64], search_history=True)
-                    )
+                for row in submitted:
+                    chain = rpc.get_transaction(str(row["signature"]))
+                    fee = meta_fee(chain)
+                    if chain is not None and fee is None:
+                        raise ConfigError(f"getTransaction for {row['signature']} had no meta.fee")
+                    if fee is None:
+                        continue
+                    landed += fee
+                    landed_n += 1
             except RpcError as exc:
-                raise ConfigError(f"not reconciling; status read failed: {exc}") from exc
-            if len(statuses) != len(submitted):
-                raise ConfigError(
-                    f"not reconciling; status count {len(statuses)} != {len(submitted)} signatures"
-                )
-            landed = landed_fee_lamports(submitted, statuses) if submitted else 0
-            landed_n = sum(
-                1
-                for status in statuses
-                if isinstance(status, dict)
-                and not status.get("err")
-                and status.get("confirmationStatus") in {"processed", "confirmed", "finalized"}
-            )
+                raise ConfigError(f"not reconciling; fee read failed: {exc}") from exc
             prepared.append((run_id, len(submitted), landed_n, landed))
     finally:
         rpc.close()
@@ -229,6 +239,53 @@ def _reconcile_on_chain(args, ledger, attempts_path: Path, rows: list[dict]) -> 
             f"run {run_id}: {landed_n}/{submitted_n} submitted signatures landed; "
             f"fees {before} -> {landed}; ledger {ledger.spent_lamports}"
         )
+    return 0
+
+
+def _sweep(args: argparse.Namespace) -> int:
+    import os
+
+    from measure.ledger import SpendLedger
+    from measure.rpc import RpcClient
+    from measure.sweep import sweep_directory
+    from measure.txbuild import load_keypair
+
+    path = args.keypair or os.environ.get("KEYPAIR_PATH")
+    if not path:
+        raise ConfigError("pass --keypair or set KEYPAIR_PATH")
+    funder = load_keypair(path)
+    data_dir = Path(args.data_dir or os.environ.get("DATA_DIR") or "data")
+    keys_dir = Path(args.keys_dir) if args.keys_dir else data_dir / "keys"
+    if not keys_dir.is_dir():
+        raise ConfigError(f"no probe keys at {keys_dir}")
+    url = args.rpc_url or os.environ.get("RPC_URL") or "https://api.mainnet-beta.solana.com"
+    rpc = RpcClient(url, timeout_s=20)
+    ledger = SpendLedger(data_dir / "spend.json", 50_000_000)
+    try:
+        directories = [keys_dir] if args.keys_dir else sorted(
+            item for item in keys_dir.iterdir() if item.is_dir()
+        )
+        returned = 0
+        failed = 0
+        for directory in directories:
+            result = sweep_directory(
+                rpc,
+                funder,
+                directory,
+                ledger=ledger,
+                run_id=f"{directory.name}:sweep",
+            )
+            returned += result["returned_lamports"]
+            failed += result["failed"]
+            print(
+                f"{directory}: closed {result['closed']}, "
+                f"returned {result['returned_lamports']} lamports, failed {result['failed']}"
+            )
+    finally:
+        rpc.close()
+    if failed:
+        raise ConfigError(f"sweep failed for {failed} account(s); keys were left in place")
+    print(f"returned_lamports: {returned}")
     return 0
 
 

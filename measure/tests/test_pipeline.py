@@ -52,7 +52,9 @@ def test_dry_run_layout_signs_without_submitting_or_charging(tmp_path, monkeypat
     assert len(json.loads((out / "validators.json").read_text(encoding="utf-8"))) == 6
     assert spend["counted_against_cap"] is False
     assert spend["planned_fee_lamports"] == manifest["spend"]["planned_fee_lamports"]
-    assert spend["projected_outlay_lamports"] < 12_000_000
+    assert spend["net_lamports"] <= 600_000
+    assert spend["peak_lamports"] <= 3_000_000
+    assert spend["projected_outlay_lamports"] == spend["peak_lamports"]
     assert not (tmp_path / "data" / "spend.json").exists()
     assert (out / "blocks").is_dir()
     assert (out / "run.log").read_text(encoding="utf-8").startswith("DRY-RUN")

@@ -77,13 +77,22 @@ Slot calls live in `measure/stats.py`: `strict_priority` at tau-b = −1, otherw
 
 ## Default cost
 
-Six leaders, both ladders, twelve funding transactions:
+Conflict probes are one-lamport self-transfers from the funder, so they do not create an account. Each non-conflict rung is its own fee payer, also a self-transfer. Those keypairs are written to `DATA_DIR/keys/<experiment_id>/` mode 0600 (gitignored). A live run sweeps them back to the funder after the probes land; `python -m measure sweep` retries any that remain.
 
-- Fees charged against the cap: **420,372 lamports (0.000420372 SOL)**
-- Rent plus one-lamport transfers: **7,802,952 lamports**
-- Outlay from the main account: **8,223,324 lamports (0.008223324 SOL)**
+Rent used for the peak figure is the 2026-10-29 `getMinimumBalanceForRentExemption(0)` value, 650,240 lamports. The non-conflict ladder is shortened until:
 
-Rent used for that figure is the live `getMinimumBalanceForRentExemption(0)` value observed on 2026-10-29: 650,240 lamports. Both numbers are under 0.012 SOL and under the 0.05 SOL cap. If the remaining cap cannot hold the fees, non-conflict rungs are removed from the top before the conflict ladder or the validator set is touched.
+- net fees (probes, funding, and the sweep) are at most **600,000 lamports (0.0006 SOL)**
+- peak capital, net plus temporary rent, is at most **3,000,000 lamports (0.003 SOL)**
+
+The conflict ladder stays at six rungs. A dry-run prints both numbers. The 0.05 SOL cap still counts fees only.
+
+A fixture dry-run at rent 650,240 lamports keeps non-conflict fees `(0, 1, 2, 4)` and projects:
+
+- net after sweep: **340,228 lamports (0.000340228 SOL)**
+- peak, including temporary rent: **2,941,212 lamports (0.002941212 SOL)**
+- temporary rent sweep returns: **2,600,984 lamports**
+
+`run --live --collect` fetches blocks after the send, including slots reported by `getSignatureStatuses` so funding is not left on a planned slot it missed. `hypothesis_agreement.json` includes `ladders`: Kendall tau-b of priority fee against block index for each validator's conflict and non-conflict group. The ledger's end-of-run reconcile, and `ledger reconcile --rpc`, sum `getTransaction` `meta.fee`. Probe bursts are written once unless `--tpu-copies` is set; each copy's timestamp is `copy_send_unix_ms`.
 
 ## Live send, after the second 2026-10-29 miss (11:17–11:22 Kyiv)
 

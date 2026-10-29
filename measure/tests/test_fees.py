@@ -6,8 +6,14 @@ from pathlib import Path
 
 import pytest
 
-from measure.budget import projected_fee_lamports, projected_outlay_lamports
-from measure.constants import CU_LIMIT, DESIGN_BUDGET_LAMPORTS, HARD_CAP_LAMPORTS, LADDER_PRIORITY_FEES
+from measure.budget import fit_rungs, projected_fee_lamports, projected_outlay_lamports
+from measure.constants import (
+    CU_LIMIT,
+    HARD_CAP_LAMPORTS,
+    LADDER_PRIORITY_FEES,
+    NET_BUDGET_LAMPORTS,
+    PEAK_BUDGET_LAMPORTS,
+)
 from measure.errors import ConfigError, SpendCapExceeded
 from measure.fees import (
     SpendGuard,
@@ -43,10 +49,18 @@ def test_priority_fee_uses_ceiling_and_scores_are_unique():
 
 
 def test_default_plan_stays_under_the_design_budget():
-    fees = projected_fee_lamports(n_leaders=6)
-    outlay = projected_outlay_lamports(n_leaders=6)
-    assert fees < outlay < DESIGN_BUDGET_LAMPORTS
-    assert outlay < HARD_CAP_LAMPORTS
+    conflict, nonconflict = fit_rungs(n_leaders=6, cap_remaining=50_000_000)
+    fees = projected_fee_lamports(
+        n_leaders=6, conflict_rungs=conflict, nonconflict_rungs=nonconflict
+    )
+    peak = projected_outlay_lamports(
+        n_leaders=6, conflict_rungs=conflict, nonconflict_rungs=nonconflict
+    )
+    assert conflict == LADDER_PRIORITY_FEES
+    assert nonconflict
+    assert fees <= NET_BUDGET_LAMPORTS
+    assert fees < peak <= PEAK_BUDGET_LAMPORTS
+    assert peak < HARD_CAP_LAMPORTS
 
 
 def test_spend_guard_and_global_ledger(tmp_path: Path):

@@ -218,6 +218,33 @@ class RpcClient:
             raise RpcError(f"sendTransaction returned {result!r}")
         return result
 
+    def get_balance(self, pubkey: str) -> int:
+        result = self.call("getBalance", [pubkey, {"commitment": "confirmed"}], attempts=6, timeout_s=15)
+        if not isinstance(result, dict) or not isinstance(result.get("value"), int):
+            raise RpcError(f"getBalance returned {result!r}")
+        return int(result["value"])
+
+    def get_transaction(self, signature: str) -> dict | None:
+        """Confirmed transaction, or None when the signature is not on chain."""
+        result = self.call(
+            "getTransaction",
+            [
+                signature,
+                {
+                    "commitment": "confirmed",
+                    "encoding": "json",
+                    "maxSupportedTransactionVersion": 1,
+                },
+            ],
+            attempts=6,
+            timeout_s=20,
+        )
+        if result is None:
+            return None
+        if not isinstance(result, dict):
+            raise RpcError(f"getTransaction returned {type(result).__name__}")
+        return result
+
     def get_block(self, slot: int) -> dict | None:
         result = self.call(
             "getBlock",

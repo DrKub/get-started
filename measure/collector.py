@@ -267,7 +267,22 @@ def _plan_fields(plan: dict) -> dict:
         "window_id",
         "window_start_slot",
     )
-    return {key: plan.get(key) for key in keys}
+    row = {key: plan.get(key) for key in keys}
+    # attempts.jsonl names the leader `leader_identity` and the ladder `ladder`.
+    if not row.get("identity"):
+        row["identity"] = plan.get("leader_identity") or plan.get("identity")
+    ladder = plan.get("ladder") or plan.get("arm")
+    if ladder:
+        row["ladder"] = ladder
+        if not row.get("arm"):
+            row["arm"] = ladder
+    if plan.get("role"):
+        row["role"] = plan.get("role")
+    if row.get("cu_price_micro_lamports") is None and plan.get("cu_price") is not None:
+        row["cu_price_micro_lamports"] = plan.get("cu_price")
+    if row.get("priority_fee_lamports") is None and plan.get("priority_fee_lamports") is not None:
+        row["priority_fee_lamports"] = plan.get("priority_fee_lamports")
+    return row
 
 
 def build_observations(
@@ -348,7 +363,46 @@ def build_observations(
                 }
             )
     rows = [found[key] for key in sorted(found)] + missing + extras
+    assign_observation_ranks(rows)
     return rows
+
+
+def assign_observation_ranks(rows: list[dict]) -> None:
+    """Rank higher fees and earlier sends within one validator ladder.
+
+    Rows that already carry a non-negative rank are left alone. Attempt
+    files do not store ranks, so those get filled here.
+    """
+    from collections import defaultdict
+
+    groups: dict[tuple, list[dict]] = defaultdict(list)
+    for row in rows:
+        ladder = row.get("ladder") or row.get("arm")
+        if ladder not in ("conflict", "nonconflict"):
+            continue
+        groups[(row.get("identity"), ladder)].append(row)
+    for group in groups.values():
+        if any(isinstance(row.get("rank_priority_fee"), int) and row["rank_priority_fee"] >= 0 for row in group):
+            continue
+        fee_order = sorted(
+            range(len(group)),
+            key=lambda index: (
+                -int(group[index].get("priority_fee_lamports") or 0),
+                int(group[index].get("send_index") or 0),
+            ),
+        )
+        for rank, index in enumerate(fee_order):
+            group[index]["rank_priority_fee"] = rank
+            group[index]["rank_cu_price"] = rank
+            group[index]["rank_arm_priority_fee"] = rank
+            group[index]["rank_arm_cu_price"] = rank
+        send_order = sorted(
+            range(len(group)),
+            key=lambda index: int(group[index].get("send_index") or 0),
+        )
+        for rank, index in enumerate(send_order):
+            group[index]["rank_send_order"] = rank
+            group[index]["rank_arm_send_order"] = rank
 
 
 def slots_to_fetch(plans: list[dict]) -> list[int]:
@@ -366,3 +420,12 @@ def slots_to_fetch(plans: list[dict]) -> list[int]:
                 for slot in range(value, value + 4):
                     slots.add(slot)
     return sorted(slots)
+
+
+def slots_from_statuses(statuses: list) -> list[int]:
+    """Slots reported by getSignatureStatuses. Funding often lands off the plan."""
+    found: list[int] = []
+    for status in statuses:
+        if isinstance(status, dict) and isinstance(status.get("slot"), int):
+            found.append(status["slot"])
+    return found

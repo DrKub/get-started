@@ -1,9 +1,9 @@
 """Default-plan fee and funding arithmetic.
 
-The 0.05 SOL cap counts fees only: base, priority, and the fee on each
-funding transfer. Rent left in probe accounts is still the operator's SOL.
-``projected_outlay_lamports`` is fees plus that principal. The default plan
-stays under ``DESIGN_BUDGET_LAMPORTS`` (0.012 SOL) on both numbers.
+Conflict probes are self-transfers from the funder, so they add no account.
+Each non-conflict rung is its own fee payer, funded with rent that
+``measure sweep`` returns. The net cost is fees only. Peak capital is that
+net plus the temporary rent, and it has to fit in about 0.003 SOL.
 """
 
 from __future__ import annotations
@@ -12,6 +12,8 @@ from measure.constants import (
     CU_LIMIT,
     DEFAULT_RENT_LAMPORTS,
     LADDER_PRIORITY_FEES,
+    NET_BUDGET_LAMPORTS,
+    PEAK_BUDGET_LAMPORTS,
     SIGNATURE_FEE_LAMPORTS,
     TRANSFER_LAMPORTS,
 )
@@ -31,16 +33,25 @@ def account_counts(
     conflict_rungs: tuple[int, ...],
     nonconflict_rungs: tuple[int, ...],
 ) -> tuple[int, int]:
-    """Return ``(nonconflict_payers, recipients)`` that must be funded."""
-    payers = len(nonconflict_rungs)
-    if nonconflict_rungs:
-        # The conflict ladder reuses recipients[0].
-        recipients = len(nonconflict_rungs)
-    elif conflict_rungs:
-        recipients = 1
-    else:
-        recipients = 0
-    return payers, recipients
+    """Return ``(ephemeral payers, extra recipients)``.
+
+    Conflict write-locks the funder. Non-conflict rungs are self-transfers,
+    so each payer is its own recipient and no second account is created.
+    """
+    del conflict_rungs
+    return len(nonconflict_rungs), 0
+
+
+def payer_deposit(
+    priority_fee: int,
+    *,
+    n_leaders: int,
+    rent_lamports: int,
+    cu_limit: int = CU_LIMIT,
+) -> int:
+    """Lamports moved into one non-conflict payer. Sweep returns the rent."""
+    probe_spend = n_leaders * (probe_fee(priority_fee, cu_limit=cu_limit) + TRANSFER_LAMPORTS)
+    return rent_lamports + SIGNATURE_FEE_LAMPORTS + probe_spend
 
 
 def projected_fee_lamports(
@@ -57,8 +68,9 @@ def projected_fee_lamports(
     probes = n_leaders * (
         ladder_fee(conflict, cu_limit=cu_limit) + ladder_fee(nonconflict, cu_limit=cu_limit)
     )
-    payers, recipients = account_counts(conflict, nonconflict)
-    return probes + (payers + recipients) * SIGNATURE_FEE_LAMPORTS
+    payers, _recipients = account_counts(conflict, nonconflict)
+    # One funding signature to create each payer, and one to sweep it back.
+    return probes + payers * (2 * SIGNATURE_FEE_LAMPORTS)
 
 
 def funding_principal_lamports(
@@ -69,21 +81,16 @@ def funding_principal_lamports(
     rent_lamports: int = DEFAULT_RENT_LAMPORTS,
     cu_limit: int = CU_LIMIT,
 ) -> int:
-    """Rent plus one-lamport transfers. Probe fees are not included."""
+    """Rent and one-lamport self-transfers. Sweep returns both."""
     del cu_limit
     conflict = tuple(LADDER_PRIORITY_FEES if conflict_rungs is None else conflict_rungs)
     nonconflict = tuple(LADDER_PRIORITY_FEES if nonconflict_rungs is None else nonconflict_rungs)
-    payers, recipients = account_counts(conflict, nonconflict)
-    transfers = n_leaders * (len(conflict) + len(nonconflict)) * TRANSFER_LAMPORTS
-    return (payers + recipients) * rent_lamports + transfers
+    payers, _recipients = account_counts(conflict, nonconflict)
+    return payers * rent_lamports + payers * n_leaders * TRANSFER_LAMPORTS
 
 
 def projected_outlay_lamports(**kwargs) -> int:
-    """Fees plus rent and the one-lamport transfers.
-
-    Non-conflict probe fees are transferred into the child accounts and then
-    paid from there, so they are counted once, inside the fee term.
-    """
+    """Peak lamports that must sit in the funder: net fees plus temporary rent."""
     return projected_fee_lamports(**kwargs) + funding_principal_lamports(**kwargs)
 
 
@@ -93,14 +100,23 @@ def fit_rungs(
     cap_remaining: int,
     rent_lamports: int = DEFAULT_RENT_LAMPORTS,
 ) -> tuple[tuple[int, ...], tuple[int, ...]]:
-    """Drop non-conflict rungs before touching the conflict ladder or the set size."""
+    """Drop non-conflict rungs before touching the conflict ladder or the set size.
+
+    The fee cap, the 0.0006 SOL net budget, and the 0.003 SOL peak budget
+    all apply. Peak includes rent that sweep is expected to return.
+    """
     conflict = tuple(LADDER_PRIORITY_FEES)
     nonconflict = list(LADDER_PRIORITY_FEES)
-    while nonconflict and projected_fee_lamports(
-        n_leaders=n_leaders,
-        conflict_rungs=conflict,
-        nonconflict_rungs=tuple(nonconflict),
-        rent_lamports=rent_lamports,
-    ) > cap_remaining:
+    while nonconflict:
+        kwargs = {
+            "n_leaders": n_leaders,
+            "conflict_rungs": conflict,
+            "nonconflict_rungs": tuple(nonconflict),
+            "rent_lamports": rent_lamports,
+        }
+        fees = projected_fee_lamports(**kwargs)
+        peak = projected_outlay_lamports(**kwargs)
+        if fees <= cap_remaining and fees <= NET_BUDGET_LAMPORTS and peak <= PEAK_BUDGET_LAMPORTS:
+            break
         nonconflict.pop()
     return conflict, tuple(nonconflict)

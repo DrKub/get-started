@@ -37,8 +37,13 @@ DEFAULT_TARGET_VALIDATORS = 6
 DEFAULT_MIN_CLIENT_FAMILIES = 3
 DEFAULT_LEADER_PAGE = 4_000
 MAX_BLOCKS_TO_FETCH = 500
-# Design budget for fees plus rent principal left in probe accounts.
-# The hard cap stays 0.05 SOL. This is the figure the default plan must beat.
+# Net fees after sweep must stay near 0.0006 SOL. Peak capital, including
+# rent that sweep returns, must stay near 0.003 SOL so a burner that has
+# already parked rent in unsaved accounts can still run.
+NET_BUDGET_LAMPORTS = 600_000
+PEAK_BUDGET_LAMPORTS = 3_000_000
+# Kept as the historical fees-plus-abandoned-rent ceiling. New plans are
+# held to NET_BUDGET_LAMPORTS and PEAK_BUDGET_LAMPORTS instead.
 DESIGN_BUDGET_LAMPORTS = 12_000_000
 
 # Frozen after a devnet simulateTransaction on 2026-10-29 (slot 516359079).

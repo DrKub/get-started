@@ -171,20 +171,33 @@ def test_auto_reconcile_keeps_reservations_when_status_is_unknown(tmp_path: Path
         txs = [tx]
 
     class FailRpc:
-        def get_signature_statuses(self, signatures, search_history=False):
-            del signatures, search_history
-            raise RpcError("getSignatureStatuses HTTP 429")
+        def get_transaction(self, signature):
+            del signature
+            raise RpcError("getTransaction HTTP 429")
 
     _reconcile_submitted(FailRpc(), Plan(), ledger)
     assert ledger.spent_lamports == 60_000
 
     class MissRpc:
-        def get_signature_statuses(self, signatures, search_history=False):
-            del signatures, search_history
-            return [None]
+        def get_transaction(self, signature):
+            del signature
+            return None
 
     _reconcile_submitted(MissRpc(), Plan(), ledger)
     assert ledger.spent_lamports == 0
+
+    ledger.reserve(5_000, run_id="e", seq=1, reason="signed")
+    tx.fee_lamports = 5_000
+    tx.submitted = True
+
+    class ChainRpc:
+        def get_transaction(self, signature):
+            del signature
+            return {"meta": {"fee": 5001, "err": None}, "slot": 462834151}
+
+    _reconcile_submitted(ChainRpc(), Plan(), ledger)
+    assert ledger.spent_lamports == 5001
+    assert tx.fee_lamports == 5001
 
 
 def test_collect_skips_and_retries_without_stopping(tmp_path: Path):
@@ -246,6 +259,110 @@ def test_ledger_reconcile_drops_unsent_reservations(tmp_path: Path):
     ledger.reset(reason="reset")
     assert ledger.spent_lamports == 0
     assert json.loads((tmp_path / "spend.json").read_text())["spent_lamports"] == 0
+
+
+def test_attempt_join_computes_per_ladder_tau():
+    from measure.analyze import ladder_taus
+    from measure.collector import ParsedBlock, ParsedTx, build_observations, slots_from_statuses
+    from measure.fees import meta_fee
+
+    attempts = [
+        {
+            "seq": 0,
+            "signature": "sig-low",
+            "ladder": "conflict",
+            "leader_identity": "Validator",
+            "priority_fee_lamports": 0,
+            "fee_lamports": 5000,
+            "send_index": 0,
+            "role": "probe",
+            "experiment_id": "e",
+        },
+        {
+            "seq": 1,
+            "signature": "sig-high",
+            "ladder": "conflict",
+            "leader_identity": "Validator",
+            "priority_fee_lamports": 16,
+            "fee_lamports": 5016,
+            "send_index": 1,
+            "role": "probe",
+            "experiment_id": "e",
+        },
+        {
+            "seq": 2,
+            "signature": "sig-fund",
+            "ladder": "funding",
+            "leader_identity": None,
+            "priority_fee_lamports": 0,
+            "fee_lamports": 5000,
+            "send_index": 0,
+            "role": "funding",
+            "experiment_id": "e",
+            "target_slot": 400,
+        },
+    ]
+    block = ParsedBlock(
+        slot=10,
+        block_time=1,
+        block_height=1,
+        parent_slot=9,
+        blockhash=None,
+        transactions=[
+            ParsedTx(0, "sig-high", 5016, 450, None, None, 1000, 16000, None, "payer", "legacy", None),
+            ParsedTx(1, "sig-low", 5000, 450, None, None, 1000, 0, None, "payer", "legacy", None),
+        ],
+        entry_index_available=False,
+    )
+    rows = build_observations([block], attempts, {0: "sig-low", 1: "sig-high", 2: "sig-fund"})
+    by_sig = {row["signature"]: row for row in rows}
+    assert by_sig["sig-high"]["ladder"] == "conflict"
+    assert by_sig["sig-high"]["identity"] == "Validator"
+    assert by_sig["sig-high"]["rank_priority_fee"] == 0
+    assert by_sig["sig-fund"]["landed"] is False
+    taus = ladder_taus(rows)
+    assert len(taus) == 1
+    assert taus[0]["ladder"] == "conflict"
+    assert taus[0]["identity"] == "Validator"
+    assert taus[0]["tau_fee_block_index"] == -1
+    assert taus[0]["n"] == 2
+    assert 462834151 in slots_from_statuses([{"slot": 462834151, "confirmationStatus": "confirmed"}, None])
+    assert meta_fee({"meta": {"fee": 5001, "err": {"InstructionError": [0, "Custom"]}}}) == 5001
+    assert meta_fee(None) is None
+
+
+def test_probe_keys_are_private_and_sweep_returns_rent(tmp_path: Path):
+    import os
+
+    from solders.keypair import Keypair
+    from solders.pubkey import Pubkey
+
+    from measure.keys import load_signers, write_keypair
+    from measure.sweep import sweep_lamports, sweep_transaction
+
+    directory = tmp_path / "keys" / "e"
+    key = Keypair()
+    path = write_keypair(directory, key)
+    assert oct(path.stat().st_mode & 0o777) == "0o600"
+    assert oct(directory.stat().st_mode & 0o777) == "0o700"
+    assert str(load_signers(directory)[0].pubkey()) == str(key.pubkey())
+    assert sweep_lamports(650_240) == 650_240 - 5_000
+    assert sweep_lamports(5_000) == 0
+    raw = sweep_transaction(key, Pubkey.new_unique(), 1000, "11111111111111111111111111111111")
+    assert raw
+    assert not os.access(path, os.R_OK | os.W_OK) or (path.stat().st_mode & 0o077) == 0
+
+
+def test_tpu_copies_default_to_one_and_attempt_records_each_copy(tmp_path: Path):
+    from measure.cli import build_parser
+
+    assert make_config(data_dir=str(tmp_path)).tpu_copies == 1
+    args = build_parser().parse_args(["run", "--live", "--collect", "--tpu-copies", "1"])
+    assert args.live and args.collect and args.tpu_copies == 1
+    tx = _planned(copy_send_unix_ms=[111, 222], send_unix_ms=111, destinations=["1.2.3.4:8003"])
+    row = _attempt_row(tx)
+    assert row["copy_send_unix_ms"] == [111, 222]
+    assert row["send_unix_ms"] == 111
 
 
 def test_collect_reads_attempt_target_slots():

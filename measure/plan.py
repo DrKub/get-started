@@ -5,8 +5,9 @@ transfer. Only the priority fee changes. They are sent low-fee first, in
 different slots of the same four-slot window. Probes carry no memo: the
 signature recorded at send time is the identity inside the block.
 
-The conflict ladder shares the main fee payer and one recipient. The
-non-conflict ladder uses a distinct payer and recipient on every rung.
+The conflict ladder is a one-lamport self-transfer from the funder, so every
+probe write-locks that one account. The non-conflict ladder uses a distinct
+payer on every rung, also a self-transfer, and those accounts are swept back.
 """
 
 from __future__ import annotations
@@ -15,7 +16,7 @@ import re
 
 from solders.keypair import Keypair
 
-from measure.budget import fit_rungs, funding_principal_lamports, probe_fee
+from measure.budget import fit_rungs, funding_principal_lamports, payer_deposit, probe_fee
 from measure.constants import (
     ALPENGLOW_ACTIVATION_EPOCH,
     ALPENGLOW_CUTOFF_SLOT,
@@ -141,14 +142,12 @@ def build_experiment(
     if len(nonconflict_rungs) < len(conflict_rungs):
         notes.append(
             "shortened the non-conflict ladder to "
-            f"{len(nonconflict_rungs)} rungs so the fee plan fits the remaining cap"
+            f"{len(nonconflict_rungs)} rungs so net fees stay within 0.0006 SOL "
+            "and peak capital, including rent that sweep returns, stays within 0.003 SOL"
         )
     scores = _require_unique_scores(tuple(dict.fromkeys(conflict_rungs + nonconflict_rungs)) or (0,))
     payer_keys = [Keypair() for _ in nonconflict_rungs]
     payers = [str(key.pubkey()) for key in payer_keys]
-    n_recipients = len(nonconflict_rungs) if nonconflict_rungs else (1 if conflict_rungs else 0)
-    recipient_keys = [Keypair() for _ in range(n_recipients)]
-    recipients = [str(key.pubkey()) for key in recipient_keys]
     signers = {pubkey: key for pubkey, key in zip(payers, payer_keys)}
     txs: list[PlannedTx] = []
     seq = 0
@@ -165,9 +164,10 @@ def build_experiment(
     if funding_leader and not funding_tpu:
         warnings.append(f"funding slot {funding_slot} leader {funding_leader} has no tpuQuic")
 
-    # Fund recipients, then non-conflict payers, from the main account.
-    for index, recipient in enumerate(recipients):
-        amount = rent_lamports
+    # Fund each non-conflict payer from the main account. Conflict probes
+    # spend from that account directly and do not create another one.
+    for index, (payer, fee) in enumerate(zip(payers, nonconflict_rungs)):
+        amount = payer_deposit(fee, n_leaders=max(len(targets), 1), rent_lamports=rent_lamports)
         txs.append(
             _tx(
                 experiment_id=exp_id,
@@ -179,28 +179,6 @@ def build_experiment(
                 planned_slot=funding_slot,
                 slot_offset=0,
                 send_index=index,
-                priority_fee=0,
-                payer=main_payer,
-                recipient=recipient,
-                transfer=amount,
-                tpu_quic=funding_tpu,
-                scores=scores,
-            )
-        )
-        seq += 1
-    for index, (payer, fee) in enumerate(zip(payers, nonconflict_rungs)):
-        amount = rent_lamports + max(len(targets), 1) * (probe_fee(fee) + TRANSFER_LAMPORTS)
-        txs.append(
-            _tx(
-                experiment_id=exp_id,
-                seq=seq,
-                ladder="funding",
-                role="funding",
-                target=None,
-                window=None,
-                planned_slot=funding_slot,
-                slot_offset=0,
-                send_index=len(recipients) + index,
                 priority_fee=0,
                 payer=main_payer,
                 recipient=payer,
@@ -227,7 +205,7 @@ def build_experiment(
                     send_index=send_index,
                     priority_fee=fee,
                     payer=main_payer,
-                    recipient=recipients[0],
+                    recipient=main_payer,
                     transfer=TRANSFER_LAMPORTS,
                     tpu_quic=target.tpu_quic,
                     scores=scores,
@@ -248,7 +226,7 @@ def build_experiment(
                     send_index=send_index,
                     priority_fee=fee,
                     payer=payers[send_index],
-                    recipient=recipients[send_index],
+                    recipient=payers[send_index],
                     transfer=TRANSFER_LAMPORTS,
                     tpu_quic=target.tpu_quic,
                     scores=scores,
@@ -257,7 +235,8 @@ def build_experiment(
             seq += 1
 
     n_leaders = len(targets)
-    fee_total = sum(tx.fee_lamports for tx in txs)
+    # Sweep fees are not transactions in the probe list. They still leave the funder.
+    fee_total = sum(tx.fee_lamports for tx in txs) + len(nonconflict_rungs) * SIGNATURE_FEE_LAMPORTS
     principal = funding_principal_lamports(
         n_leaders=n_leaders,
         conflict_rungs=conflict_rungs,
@@ -282,9 +261,8 @@ def build_experiment(
         snapshot=snapshot,
         warnings=warnings,
     )
-    # In-memory only. Callers sign, then drop this. It is not serialized.
+    # In-memory until a live run writes them under DATA_DIR/keys (mode 0600).
     plan.ephemeral_signers = signers  # type: ignore[attr-defined]
-    del recipient_keys
     return plan
 
 

@@ -94,6 +94,19 @@ def priority_score(cu_limit: int, priority_fee_lamports: int) -> int:
     return (reward * MICROLAMPORTS_PER_LAMPORT) // (cost + 1)
 
 
+def meta_fee(transaction: dict | None) -> int | None:
+    """``meta.fee`` from getTransaction. A failed transaction still paid the fee.
+
+    None means the signature was not found, or the payload had no fee.
+    """
+    if not isinstance(transaction, dict):
+        return None
+    meta = transaction.get("meta")
+    if not isinstance(meta, dict) or not isinstance(meta.get("fee"), int):
+        return None
+    return int(meta["fee"])
+
+
 def transaction_fee_lamports(
     cu_limit: int,
     cu_price_micro_lamports: int,

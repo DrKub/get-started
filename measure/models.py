@@ -104,6 +104,7 @@ class PlannedTx:
     error: str | None = None
     destinations: list[str] = field(default_factory=list)
     send_unix_ms: int | None = None
+    copy_send_unix_ms: list[int] = field(default_factory=list)
 
 
 @dataclass

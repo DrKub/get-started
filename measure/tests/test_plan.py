@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from measure.budget import projected_outlay_lamports
-from measure.constants import DESIGN_BUDGET_LAMPORTS, LADDER_PRIORITY_FEES
+from measure.constants import LADDER_PRIORITY_FEES, NET_BUDGET_LAMPORTS, PEAK_BUDGET_LAMPORTS
 from measure.offline_snapshot import IDENTITIES, build_offline_snapshot
 from measure.plan import build_experiment
 from measure.select import ensure_stake_diversity
@@ -40,8 +40,13 @@ def test_selects_six_current_families_and_skips_frankendancer():
     versions = {target.client_family: target.version for target in plan.targets}
     assert versions["firedancer"] == versions["harmonic-firedancer"] == "26.10.4"
     assert versions["agave"] == versions["jito-solana"] == "4.3.2"
-    assert plan.projected_outlay_lamports == projected_outlay_lamports(n_leaders=6)
-    assert plan.projected_outlay_lamports < DESIGN_BUDGET_LAMPORTS
+    assert plan.projected_outlay_lamports == projected_outlay_lamports(
+        n_leaders=6,
+        conflict_rungs=plan.conflict_rungs,
+        nonconflict_rungs=plan.nonconflict_rungs,
+    )
+    assert plan.total_fee_lamports <= NET_BUDGET_LAMPORTS
+    assert plan.projected_outlay_lamports <= PEAK_BUDGET_LAMPORTS
     assert all(len(target.assigned) == 1 and target.assigned[0].path == "tpu" for target in plan.targets)
 
 
@@ -55,8 +60,9 @@ def test_ladders_are_low_fee_first_and_do_not_share_nonconflict_accounts():
     assert [tx.send_index for tx in conflict] == list(range(6))
     assert len({tx.payer for tx in conflict}) == 1
     assert len({tx.recipient for tx in conflict}) == 1
-    assert len({tx.payer for tx in nonconflict}) == 6
-    assert len({tx.recipient for tx in nonconflict}) == 6
+    assert conflict[0].payer == conflict[0].recipient
+    assert len({tx.payer for tx in nonconflict}) == len(plan.nonconflict_rungs)
+    assert {tx.payer for tx in nonconflict} == {tx.recipient for tx in nonconflict}
     assert {tx.payer for tx in nonconflict}.isdisjoint({tx.payer for tx in conflict})
     assert conflict[0].planned_slot != nonconflict[0].planned_slot
     assert all(tx.cu_limit == 1000 for tx in conflict + nonconflict)
