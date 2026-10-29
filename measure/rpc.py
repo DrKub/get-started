@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import random
 import time
 from urllib.parse import urlsplit
 
@@ -11,6 +12,13 @@ from measure.constants import USER_AGENT
 from measure.errors import RpcError
 
 _RETRY_HTTP = {429, 500, 502, 503, 504}
+
+
+def retry_delay(attempt: int, *, jitter: float | None = None) -> float:
+    """Exponential backoff capped at 8s, plus jitter so parallel readers don't line up."""
+    base = min(8.0, 0.25 * (2 ** min(attempt, 5)))
+    extra = random.uniform(0, 0.4) if jitter is None else jitter
+    return base + extra
 # getSlot / node-behind style codes that are worth one more try.
 _RETRY_RPC = {-32004, -32005, -32016}
 
@@ -23,10 +31,12 @@ class RpcClient:
     timeout is enforced on every call so a stuck read cannot run for minutes.
     """
 
-    def __init__(self, url: str, *, timeout_s: float = 20.0, backoff_s: float = 0.2) -> None:
+    def __init__(self, url: str, *, timeout_s: float = 20.0, backoff_s: float = 0.2, read_gap_s: float = 0.25) -> None:
         self.url = url
         self.timeout_s = timeout_s
         self.backoff_s = backoff_s
+        self.read_gap_s = read_gap_s
+        self._next_read = 0.0
         self._conn: http.client.HTTPConnection | None = None
         parts = urlsplit(url)
         self._scheme = parts.scheme or "https"
@@ -67,7 +77,10 @@ class RpcClient:
         payload = json.dumps(body).encode("utf-8")
         timeout = self.timeout_s if timeout_s is None else timeout_s
         last_error: Exception | None = None
+        pace = method != "sendTransaction"
         for attempt in range(attempts):
+            if pace:
+                self._pace_read()
             conn = self._connection(timeout)
             try:
                 conn.request(
@@ -86,7 +99,7 @@ class RpcClient:
                     last_error = RpcError(f"{method} HTTP {response.status}")
                     self.close()
                     if attempt + 1 < attempts:
-                        time.sleep(self.backoff_s * (2**attempt))
+                        time.sleep(retry_delay(attempt))
                         continue
                     raise last_error
                 if response.status >= 400:
@@ -106,21 +119,36 @@ class RpcClient:
                 error = decoded["error"]
                 code = error.get("code") if isinstance(error, dict) else None
                 if code in _RETRY_RPC and attempt + 1 < attempts:
-                    time.sleep(self.backoff_s * (2**attempt))
+                    time.sleep(retry_delay(attempt))
                     continue
                 raise RpcError(f"{method}: {error}")
+            if pace:
+                self._mark_read()
             return decoded.get("result")
         raise RpcError(f"{method} failed: {last_error}")
 
-    def get_slot(self, *, timeout_s: float = 2.0) -> int:
-        return int(self.call("getSlot", [{"commitment": "processed"}], attempts=2, timeout_s=timeout_s))
+    def _pace_read(self) -> None:
+        wait = self._next_read - time.monotonic()
+        if wait > 0:
+            time.sleep(wait)
 
-    def get_signature_statuses(self, signatures: list[str]) -> list[dict | None]:
+    def _mark_read(self) -> None:
+        self._next_read = time.monotonic() + self.read_gap_s
+
+    def get_slot(self, *, timeout_s: float = 2.0) -> int:
+        return int(self.call("getSlot", [{"commitment": "processed"}], attempts=6, timeout_s=timeout_s))
+
+    def get_signature_statuses(
+        self,
+        signatures: list[str],
+        *,
+        search_history: bool = False,
+    ) -> list[dict | None]:
         result = self.call(
             "getSignatureStatuses",
-            [signatures, {"searchTransactionHistory": False}],
-            attempts=2,
-            timeout_s=5,
+            [signatures, {"searchTransactionHistory": search_history}],
+            attempts=8,
+            timeout_s=8,
         )
         if not isinstance(result, dict):
             raise RpcError("getSignatureStatuses returned no value")

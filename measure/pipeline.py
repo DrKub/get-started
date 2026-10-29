@@ -159,12 +159,16 @@ def _git_sha() -> str | None:
 
 
 def _attempt_row(tx: PlannedTx) -> dict:
-    host, _, port = (tx.tpu_quic or "").rpartition(":")
+    destinations = list(tx.destinations)
+    tpu_dest = next((item for item in destinations if item and ":" in item and not item.startswith("rpc")), tx.tpu_quic or "")
+    host, _, port = (tpu_dest or "").rpartition(":")
     return {
         "block_index": None,
         "cu_limit": tx.cu_limit,
         "cu_price": tx.cu_price_micro_lamports,
-        "error": None,
+        "destinations": destinations,
+        "error": tx.error,
+        "experiment_id": tx.experiment_id,
         "fee_lamports": tx.fee_lamports,
         "ladder": tx.ladder,
         "landed_slot": None,
@@ -173,8 +177,7 @@ def _attempt_row(tx: PlannedTx) -> dict:
         "priority_score": tx.priority_score,
         "role": tx.role,
         "send_index": tx.send_index,
-        "error": tx.error,
-        "send_unix_ms": None,
+        "send_unix_ms": tx.send_unix_ms,
         "seq": tx.seq,
         "signature": tx.signature,
         "signed": tx.signed,
@@ -219,6 +222,14 @@ def _run_dir(config: Config) -> Path:
     return path
 
 
+def _ws_from_rpc(url: str) -> str:
+    if url.startswith("https://"):
+        return "wss://" + url[len("https://") :]
+    if url.startswith("http://"):
+        return "ws://" + url[len("http://") :]
+    return url
+
+
 def manifest_dict(plan: ExperimentPlan, config: Config) -> dict:
     snapshot = plan.snapshot
     families = []
@@ -248,6 +259,7 @@ def manifest_dict(plan: ExperimentPlan, config: Config) -> dict:
             "jito_bundles": "out_of_scope",
             "nonconflict_rungs": list(plan.nonconflict_rungs),
             "primary_evidence": "self_sent_signatures",
+            "funding_submit_path": "rpc+tpu-fanout",
             "retries_inside_window": RETRIES_INSIDE_WINDOW,
             "submit_path": "tpu",
             "transmission_order": "lowest fee first",
@@ -267,6 +279,7 @@ def manifest_dict(plan: ExperimentPlan, config: Config) -> dict:
         "observed_slot": snapshot.observed_slot,
         "regime": plan.regime,
         "rpc_url": None if snapshot.source == "fixture" else redact_url(config.rpc_url),
+        "ws_url": None if snapshot.source == "fixture" else redact_url(config.ws_url or _ws_from_rpc(config.rpc_url)),
         "schedule_start_slot": snapshot.schedule_start_slot,
         "selection_ok": plan.selection_ok,
         "selection_reason": plan.selection_reason,
@@ -554,47 +567,65 @@ def _release_batch(ledger: SpendLedger, batch: list[PlannedTx], run_id: str, rea
         ledger.release(tx.fee_lamports, run_id=run_id, seq=tx.seq, reason=reason)
 
 
-def _submit_batch(batch: list[PlannedTx], payloads: list[bytes], tpu: str, rpc: RpcClient) -> str:
-    """Return the path that accepted the batch. Raise when neither path did."""
+def _submit_batch(
+    payloads: list[bytes],
+    tpu: str,
+    rpc: RpcClient,
+    *,
+    allow_rpc: bool,
+    pool=None,
+    copies: int = 1,
+) -> str:
+    """Return the path that accepted the batch. Raise when none did.
+
+    Probe bursts stay on the target leader's TPU. Funding may use RPC.
+    """
     from measure.tpu import TpuSendError, TpuSender
 
     tpu_error = ""
     if tpu:
         try:
-            TpuSender().send_payloads(payloads, destination=tpu)
+            if pool is not None:
+                pool.send(tpu, payloads, copies=copies)
+            else:
+                TpuSender().send_payloads(payloads, destination=tpu)
             return "tpu"
         except TpuSendError as exc:
             tpu_error = str(exc)
             logger.error("TPU send failed: %s", exc)
-            if exc.transmitted:
-                # The leader may have the bytes. Do not also send them via RPC.
+            if exc.transmitted or not allow_rpc:
                 raise
         except Exception as exc:
             tpu_error = str(exc)
             logger.error("TPU send failed: %s", exc)
+            if not allow_rpc:
+                raise TpuSendError(tpu_error, transmitted=False) from exc
+    if not allow_rpc:
+        raise TpuSendError(tpu_error or "no TPU destination", transmitted=False)
     try:
         for raw in payloads:
             rpc.send_transaction(raw)
-        return "rpc-fallback"
+        return "rpc"
     except Exception as exc:
         detail = f"tpu: {tpu_error}; rpc: {exc}" if tpu_error else str(exc)
         raise RpcError(detail) from exc
 
 
-def _signatures_landed(rpc: RpcClient, signatures: list[str]) -> bool:
+def _signature_report(rpc: RpcClient, signatures: list[str]) -> str:
+    """``landed``, ``failed``, ``pending``, or ``unknown`` (a read error, often 429)."""
     if not signatures:
-        return True
+        return "landed"
     try:
         statuses = rpc.get_signature_statuses(signatures)
     except RpcError as exc:
         logger.warning("signature status failed: %s", exc)
-        return False
-    for status in statuses:
-        if not status or status.get("err"):
-            return False
-        if status.get("confirmationStatus") not in {"processed", "confirmed", "finalized"}:
-            return False
-    return True
+        return "unknown"
+    if any(status and status.get("err") for status in statuses):
+        return "failed"
+    ok = {"processed", "confirmed", "finalized"}
+    if all(status and status.get("confirmationStatus") in ok and not status.get("err") for status in statuses):
+        return "landed"
+    return "pending"
 
 
 def _run_live(plan: ExperimentPlan, config: Config, run_dir: Path, ledger: SpendLedger, genesis) -> int:
@@ -604,12 +635,14 @@ def _run_live(plan: ExperimentPlan, config: Config, run_dir: Path, ledger: Spend
     that fails before the leader accepts it is released. There is no retry
     of the same group; RPC is a different path, recorded on the row.
     """
-    from measure.slots import SlotFeed, send_decision
+    from measure.slots import SlotFeed, burst_lead_slots, fanout_identities, send_decision
+    from measure.tpu import TpuPool
 
     keypair = load_keypair(config.keypair_path)
     signers = {str(keypair.pubkey()): keypair, **getattr(plan, "ephemeral_signers", {})}
     rpc = RpcClient(config.rpc_url, timeout_s=config.timeout_s)
-    feed = SlotFeed(rpc, config.rpc_url)
+    feed = SlotFeed(rpc, config.rpc_url, ws_url=config.ws_url)
+    pool = TpuPool()
     feed.start()
     logger.info("slot clock: %s", feed.source)
     aborted = None
@@ -618,13 +651,26 @@ def _run_live(plan: ExperimentPlan, config: Config, run_dir: Path, ledger: Spend
         probes = [tx for tx in plan.txs if tx.role != "funding"]
         if funding:
             slot_now = feed.current()
-            leader = rpc.get_slot_leader(slot_now)
-            tpu = _tpu_for(plan, leader)
-            if not _send_group(funding, plan, ledger, signers, rpc, tpu, slot_now):
+            fanout: list[str] = []
+            try:
+                leaders = rpc.get_slot_leaders_range(slot_now, 24)
+            except RpcError as exc:
+                logger.warning("funding fan-out leaders unavailable: %s", exc)
+                leaders = []
+            for identity in fanout_identities(leaders, 3):
+                tpu = _tpu_for(plan, identity)
+                if tpu and tpu not in fanout:
+                    fanout.append(tpu)
+            # Order does not matter for funding. RPC reaches whichever
+            # leader is producing now; copies to the next leaders are backup.
+            if not _send_funding(funding, plan, ledger, signers, rpc, pool, fanout, slot_now):
                 aborted = "funding_failed"
             else:
-                deadline_slot = min(tx.planned_slot for tx in probes) - BURST_OFFSET_SLOTS if probes else slot_now + 40
-                if not _wait_landed(rpc, feed, [tx.signature for tx in funding if tx.signature], deadline_slot):
+                deadline_slot = (
+                    min(tx.planned_slot for tx in probes) - BURST_OFFSET_SLOTS if probes else slot_now + 80
+                )
+                pending_sigs = [tx.signature for tx in funding if tx.submitted and tx.signature]
+                if not _wait_landed(rpc, feed, pending_sigs, deadline_slot):
                     aborted = "funding_unconfirmed"
                     for tx in probes:
                         tx.error = "funding_unconfirmed"
@@ -635,31 +681,91 @@ def _run_live(plan: ExperimentPlan, config: Config, run_dir: Path, ledger: Spend
             for key in sorted(groups):
                 batch = groups[key]
                 target = batch[0].planned_slot
+                tpu = batch[0].tpu_quic
+                warm_at = max(target - QUIC_WARMUP_SLOTS, 0)
                 try:
                     slot_now = feed.wait_until(
-                        max(target - BURST_OFFSET_SLOTS, 0),
-                        timeout_s=max(30.0, (target - feed.slot) * 0.3 + 20),
+                        warm_at,
+                        timeout_s=max(30.0, (warm_at - feed.slot) * 0.3 + 20),
                     )
                 except TimeoutError:
                     aborted = "timeout"
                     for tx in batch:
                         tx.error = "timeout"
                     break
+                if send_decision(
+                    slot_now,
+                    target_slot=target,
+                    window_start=batch[0].window_start_slot,
+                    window_length=batch[0].window_length,
+                    burst_offset=QUIC_WARMUP_SLOTS,
+                ) == "skip":
+                    for tx in batch:
+                        tx.error = "missed_window"
+                    logger.error("skipped slot %s at current slot %s", target, slot_now)
+                    continue
+                rtt = 0.4
+                if tpu:
+                    try:
+                        rtt = pool.warm(tpu)
+                        logger.info("warmed %s in %.3fs", tpu, rtt)
+                    except Exception as exc:
+                        logger.error("QUIC warm %s failed: %s", tpu, exc)
+                lead = max(BURST_OFFSET_SLOTS, burst_lead_slots(rtt))
+                # Sign while the warmed connection waits, so the burst itself
+                # is only the write. RPC is not a probe path.
+                payloads = _sign_batch(batch, plan, ledger, signers, rpc)
+                if payloads is None:
+                    if any(tx.error == "spend_cap" for tx in batch):
+                        aborted = "spend_cap"
+                        break
+                    aborted = aborted or "send_failed"
+                    continue
+                ready_at = max(target - lead, 0)
+                if feed.slot < ready_at:
+                    try:
+                        slot_now = feed.wait_until(ready_at, timeout_s=max(10.0, lead * 0.4 + 5))
+                    except TimeoutError:
+                        slot_now = feed.slot
                 decision = send_decision(
                     slot_now,
                     target_slot=target,
                     window_start=batch[0].window_start_slot,
                     window_length=batch[0].window_length,
-                    burst_offset=BURST_OFFSET_SLOTS,
+                    burst_offset=lead,
                 )
                 if decision == "skip":
                     for tx in batch:
                         tx.error = "missed_window"
+                        tx.submitted = False
+                        tx.sent = False
+                    _release_batch(ledger, batch, plan.experiment_id, "missed_window")
                     logger.error("skipped slot %s at current slot %s", target, slot_now)
                     continue
-                if not _send_group(batch, plan, ledger, signers, rpc, batch[0].tpu_quic, slot_now):
+                # Same leader only, twice, on the connection that is already open.
+                if not _transmit_signed(
+                    batch,
+                    plan,
+                    ledger,
+                    payloads,
+                    rpc,
+                    tpu,
+                    slot_now,
+                    allow_rpc=False,
+                    pool=pool,
+                    copies=2,
+                    extra_destinations=[tpu] if tpu else [],
+                ):
                     aborted = aborted or "send_failed"
+    except RpcError as exc:
+        logger.error("live run hit a read error: %s", exc)
+        aborted = aborted or "rpc_read_failed"
     finally:
+        try:
+            _reconcile_submitted(rpc, plan, ledger)
+        except Exception as exc:
+            logger.warning("ledger reconcile skipped: %s", exc)
+        pool.close()
         feed.close()
         rpc.close()
         if hasattr(plan, "ephemeral_signers"):
@@ -680,56 +786,264 @@ def _run_live(plan: ExperimentPlan, config: Config, run_dir: Path, ledger: Spend
     return exit_code
 
 
-def _send_group(batch, plan, ledger, signers, rpc, tpu: str, slot_now: int) -> bool:
+def describe_submit(rpc_sent: bool, delivered: list[str]) -> tuple[str, list[str], str]:
+    """Path label, actual destinations, and the TPU host:port that accepted bytes."""
+    destinations = (["rpc"] if rpc_sent else []) + list(delivered)
+    if rpc_sent and delivered:
+        path = "rpc+tpu-fanout"
+    elif rpc_sent:
+        path = "rpc"
+    else:
+        path = "tpu"
+    actual_tpu = delivered[0] if delivered else ""
+    return path, destinations, actual_tpu
+
+
+def _send_funding(batch, plan, ledger, signers, rpc, pool, fanout: list[str], slot_now: int) -> bool:
+    """RPC first, then the same bytes to the next two or three leaders."""
+    import time as _time
+
     try:
         _reserve_batch(ledger, batch, plan.experiment_id)
     except SpendCapExceeded:
         for tx in batch:
             tx.error = "spend_cap"
         return False
-    blockhash = rpc.get_latest_blockhash()
-    payloads = []
+    payloads: list[bytes] = []
     try:
+        blockhash = rpc.get_latest_blockhash()
         for tx in batch:
             raw, signature = sign_transaction(tx, signers[tx.payer], blockhash)
             tx.signature = signature
             tx.signed = True
             payloads.append(raw)
-        path = _submit_batch(batch, payloads, tpu, rpc)
     except Exception as exc:
-        logger.error("batch seq %s not submitted: %s", batch[0].seq, exc)
+        logger.error("funding seq %s not signed: %s", batch[0].seq, exc)
         for tx in batch:
             tx.error = str(exc)
             tx.submitted = False
             tx.sent = False
-        if not getattr(exc, "transmitted", False):
-            _release_batch(ledger, batch, plan.experiment_id, "send_failed")
+        _release_batch(ledger, batch, plan.experiment_id, "sign_failed")
         return False
-    finally:
-        del payloads
-    for tx in batch:
-        tx.submit_path = path
-        tx.path = path
-        tx.submitted = True
-        tx.sent = True
-        tx.error = None
-    logger.info("submitted %s txs via %s at slot %s", len(batch), path, slot_now)
+    rpc_flags: list[bool] = []
+    for raw in payloads:
+        try:
+            rpc.send_transaction(raw)
+            rpc_flags.append(True)
+        except Exception as exc:
+            logger.error("funding RPC send failed: %s", exc)
+            rpc_flags.append(False)
+    delivered: list[str] = []
+    for destination in fanout[:3]:
+        try:
+            pool.send(destination, payloads, copies=1)
+            delivered.append(destination)
+        except Exception as exc:
+            logger.warning("funding TPU %s failed: %s", destination, exc)
+            if getattr(exc, "transmitted", False):
+                delivered.append(destination)
+    del payloads
+    tpu_ok = bool(delivered)
+    rpc_sent = any(rpc_flags)
+    path, destinations, actual_tpu = describe_submit(rpc_sent, delivered)
+    sent_ms = int(_time.time() * 1000)
+    for tx, rpc_ok in zip(batch, rpc_flags):
+        if rpc_ok or tpu_ok:
+            tx.submit_path = path
+            tx.path = path
+            tx.destinations = list(destinations)
+            tx.tpu_quic = actual_tpu
+            tx.send_unix_ms = sent_ms
+            tx.submitted = True
+            tx.sent = True
+            tx.error = None
+        else:
+            tx.error = "funding_not_accepted"
+            tx.submitted = False
+            tx.sent = False
+            ledger.release(tx.fee_lamports, run_id=plan.experiment_id, seq=tx.seq, reason="send_failed")
+    if not all(tx.submitted for tx in batch):
+        logger.error("funding seq %s was not accepted via RPC or TPU", batch[0].seq)
+        return False
+    logger.info("submitted funding via %s at slot %s to %s", path, slot_now, destinations)
     return True
 
 
+def _sign_batch(batch, plan, ledger, signers, rpc) -> list[bytes] | None:
+    try:
+        _reserve_batch(ledger, batch, plan.experiment_id)
+    except SpendCapExceeded:
+        for tx in batch:
+            tx.error = "spend_cap"
+        return None
+    payloads: list[bytes] = []
+    try:
+        blockhash = rpc.get_latest_blockhash()
+        for tx in batch:
+            raw, signature = sign_transaction(tx, signers[tx.payer], blockhash)
+            tx.signature = signature
+            tx.signed = True
+            payloads.append(raw)
+        return payloads
+    except Exception as exc:
+        logger.error("batch seq %s not signed: %s", batch[0].seq, exc)
+        for tx in batch:
+            tx.error = str(exc)
+            tx.submitted = False
+            tx.sent = False
+        _release_batch(ledger, batch, plan.experiment_id, "sign_failed")
+        return None
+
+
+def _transmit_signed(
+    batch,
+    plan,
+    ledger,
+    payloads: list[bytes],
+    rpc,
+    tpu: str,
+    slot_now: int,
+    *,
+    allow_rpc: bool,
+    pool,
+    copies: int,
+    extra_destinations: list[str] | None,
+) -> bool:
+    import time as _time
+
+    try:
+        path = _submit_batch(
+            payloads, tpu, rpc, allow_rpc=allow_rpc, pool=pool, copies=copies
+        )
+    except Exception as exc:
+        logger.error("batch seq %s not submitted: %s", batch[0].seq, exc)
+        transmitted = bool(getattr(exc, "transmitted", False))
+        for tx in batch:
+            tx.submitted = transmitted
+            tx.sent = transmitted
+            tx.error = None if transmitted else str(exc)
+            if transmitted:
+                tx.submit_path = "tpu"
+                tx.path = "tpu"
+                tx.send_unix_ms = int(_time.time() * 1000)
+                tx.destinations = list(extra_destinations or ([tpu] if tpu else []))
+                if tpu:
+                    tx.tpu_quic = tpu
+        if not transmitted:
+            _release_batch(ledger, batch, plan.experiment_id, "send_failed")
+            return False
+        return True
+    finally:
+        del payloads
+    destinations = list(extra_destinations or [])
+    if path == "rpc" and "rpc" not in destinations:
+        destinations.insert(0, "rpc")
+    if path == "tpu" and tpu and tpu not in destinations:
+        destinations.append(tpu)
+    sent_ms = int(_time.time() * 1000)
+    for tx in batch:
+        tx.submit_path = path
+        tx.path = path
+        tx.destinations = destinations
+        if path == "tpu" and tpu:
+            tx.tpu_quic = tpu
+        elif path == "rpc":
+            tx.tpu_quic = ""
+        tx.send_unix_ms = sent_ms
+        tx.submitted = True
+        tx.sent = True
+        tx.error = None
+    logger.info(
+        "submitted %s txs via %s x%s at slot %s to %s",
+        len(batch),
+        path,
+        copies,
+        slot_now,
+        destinations,
+    )
+    return True
+
+
+def _reconcile_submitted(rpc: RpcClient, plan: ExperimentPlan, ledger: SpendLedger) -> None:
+    """Match this run's reservations to signatures that actually landed.
+
+    A status read that fails (HTTP 429 included) leaves the ledger alone.
+    An empty landed set from a failed read must not zero a real send.
+    """
+    from measure.ledger import landed_fee_lamports
+
+    submitted = [tx for tx in plan.txs if tx.submitted and tx.signature]
+    if not submitted:
+        if ledger.net_for_run(plan.experiment_id):
+            ledger.reconcile_run(plan.experiment_id, 0)
+        return
+    try:
+        statuses: list = []
+        signatures = [str(tx.signature) for tx in submitted]
+        for start in range(0, len(signatures), 64):
+            statuses.extend(
+                rpc.get_signature_statuses(signatures[start : start + 64], search_history=True)
+            )
+    except RpcError as exc:
+        logger.warning("ledger left unchanged; status read failed: %s", exc)
+        return
+    if len(statuses) != len(submitted):
+        logger.warning(
+            "ledger left unchanged; status count %s != %s signatures",
+            len(statuses),
+            len(submitted),
+        )
+        return
+    rows = [{"fee_lamports": tx.fee_lamports, "signature": tx.signature} for tx in submitted]
+    landed = landed_fee_lamports(rows, statuses)
+    before = ledger.spent_lamports
+    after = ledger.reconcile_run(plan.experiment_id, landed)
+    logger.info(
+        "reconciled %s to %s landed lamports (ledger %s -> %s)",
+        plan.experiment_id,
+        landed,
+        before,
+        after,
+    )
+
+
 def _wait_landed(rpc, feed, signatures: list[str | None], deadline_slot: int) -> bool:
+    import time
+
+    from measure.rpc import retry_delay
+
     pending = [sig for sig in signatures if sig]
     if not pending:
         return False
+    extra_until = None
     while True:
-        if _signatures_landed(rpc, pending):
+        report = _signature_report(rpc, pending)
+        if report == "landed":
             return True
-        if feed.slot >= deadline_slot:
+        if report == "failed":
             return False
+        past_deadline = feed.slot >= deadline_slot
+        if report == "unknown":
+            # A 429 is not "not landed". Keep reading through the slot
+            # deadline and a further 90s of backoff.
+            if past_deadline:
+                if extra_until is None:
+                    extra_until = time.monotonic() + 90
+                if time.monotonic() >= extra_until:
+                    logger.warning("signature status still unknown after the funding deadline")
+                    return False
+            time.sleep(max(0.75, retry_delay(0)))
+            continue
+        extra_until = None
+        if past_deadline:
+            return False
+        time.sleep(0.75)
         try:
-            feed.wait_until(feed.slot + 1, timeout_s=5)
+            feed.wait_until(min(feed.slot + 1, deadline_slot), timeout_s=8)
         except TimeoutError:
-            return _signatures_landed(rpc, pending)
+            if feed.slot >= deadline_slot:
+                return _signature_report(rpc, pending) == "landed"
+            continue
 
 
 def _collect_live(rpc: RpcClient, plan: ExperimentPlan, sent_rows: list[dict], config: Config) -> None:
@@ -755,23 +1069,41 @@ def collect_from_sent(config: Config, sent_path, plans_path) -> int:
     return 0
 
 
-def _write_collection(rpc, slots, plans, sent_rows, out: Path) -> None:
+def _write_collection(
+    rpc,
+    slots,
+    plans,
+    sent_rows,
+    out: Path,
+    *,
+    sleep=None,
+    deadline_s: float = 90.0,
+    max_attempts: int = 40,
+) -> None:
     from measure.constants import MAX_BLOCKS_TO_FETCH
 
     if len(slots) > MAX_BLOCKS_TO_FETCH:
         raise ConfigError(f"refusing to fetch {len(slots)} blocks")
     import time
 
+    if sleep is None:
+        sleep = time.sleep
     blocks = []
     block_dir = out / "blocks"
     block_dir.mkdir(parents=True, exist_ok=True)
     for index, slot in enumerate(slots):
-        result = rpc.get_block(slot)
+        result = _fetch_block(
+            rpc,
+            slot,
+            block_dir,
+            sleep=sleep,
+            deadline_s=deadline_s,
+            max_attempts=max_attempts,
+        )
         if result is not None:
-            dump_json(block_dir / f"{slot}.json", result)
             blocks.append(parse_block(result, slot))
         if index + 1 < len(slots):
-            time.sleep(0.25)
+            sleep(0.35)
     signatures = {
         row["seq"]: row["signature"]
         for row in sent_rows
@@ -785,6 +1117,55 @@ def _write_collection(rpc, slots, plans, sent_rows, out: Path) -> None:
     write_csv(out / "block_observations.csv", observations, OBSERVATION_FIELDS)
     write_jsonl(out / "block_context.jsonl", contexts)
     dump_json(out / "hypothesis_agreement.json", analysis)
+
+
+def _fetch_block(rpc, slot: int, block_dir: Path, *, sleep, deadline_s: float, max_attempts: int):
+    """Return a block, or None after a skip / a paced give-up. Never raises RpcError."""
+    import time
+
+    from measure.rpc import retry_delay
+    from measure.slots import block_fetch_action
+
+    started = time.monotonic()
+    attempt = 0
+    while True:
+        try:
+            result = rpc.get_block(slot)
+        except RpcError as exc:
+            action = block_fetch_action(str(exc))
+            if action == "skip":
+                dump_json(block_dir / f"{slot}.skipped.json", {"error": str(exc), "slot": slot})
+                logger.info("slot %s skipped: %s", slot, exc)
+                return None
+            elapsed = time.monotonic() - started
+            delay = retry_delay(attempt)
+            current = 0
+            limit = deadline_s
+            if action == "wait":
+                try:
+                    current = int(rpc.get_slot(timeout_s=5))
+                except RpcError:
+                    current = 0
+                if current and current < slot:
+                    delay = max(delay, min(8.0, (slot - current) * 0.215))
+                    limit = min(300.0, max(deadline_s, (slot - current) * 0.215 + 30))
+            if attempt + 1 >= max_attempts or elapsed >= limit:
+                dump_json(
+                    block_dir / f"{slot}.unavailable.json",
+                    {"action": action, "error": str(exc), "slot": slot},
+                )
+                logger.warning("leaving slot %s unread (%s): %s", slot, action, exc)
+                return None
+            logger.info("getBlock %s %s, retry in %.2fs", slot, action, delay)
+            sleep(delay)
+            attempt += 1
+            continue
+        if result is None:
+            dump_json(block_dir / f"{slot}.empty.json", {"slot": slot})
+            logger.info("slot %s returned no block", slot)
+            return None
+        dump_json(block_dir / f"{slot}.json", result)
+        return result
 
 
 def parse_block_file(path, slot: int, output_dir) -> int:

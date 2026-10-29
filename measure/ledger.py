@@ -59,6 +59,26 @@ class SpendLedger:
         self.spent_lamports = 0
         self._append(delta, run_id="", seq=-1, reason=reason)
 
+    def net_for_run(self, run_id: str) -> int:
+        return sum(int(entry.get("lamports") or 0) for entry in self.entries if entry.get("run_id") == run_id)
+
+    def reconcile_run(self, run_id: str, landed_lamports: int) -> int:
+        """Move this run's net fees to ``landed_lamports``. Other runs stay.
+
+        A global replace would wipe an earlier run's real spend. The delta
+        is this run only: unlanded reservations come back, landed fees stay.
+        """
+        if not run_id:
+            raise ValueError("reconcile_run requires a run id")
+        if landed_lamports < 0:
+            raise ValueError("landed lamports must be non-negative")
+        delta = landed_lamports - self.net_for_run(run_id)
+        if delta == 0:
+            return self.spent_lamports
+        self.spent_lamports += delta
+        self._append(delta, run_id=run_id, seq=-1, reason="reconcile:landed")
+        return self.spent_lamports
+
     def reconcile(self, attempts: list[dict], *, landed_signatures: set[str] | None = None) -> int:
         """Replace the running total with fees that were submitted, or that landed.
 
@@ -108,3 +128,41 @@ class SpendLedger:
         temporary = self.path.with_suffix(".json.tmp")
         temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         os.replace(temporary, self.path)
+
+
+_LANDED_STATUS = {"processed", "confirmed", "finalized"}
+
+
+def landed_fee_lamports(rows: list[dict], statuses: list) -> int:
+    """Fees whose signature status is on chain. Null, error, and failed are zero."""
+    total = 0
+    for row, status in zip(rows, statuses):
+        if not isinstance(status, dict) or status.get("err"):
+            continue
+        if status.get("confirmationStatus") not in _LANDED_STATUS:
+            continue
+        total += int(row.get("fee_lamports") or 0)
+    return total
+
+
+def group_attempts(
+    rows: list[dict],
+    *,
+    run_id: str | None = None,
+    manifest_id: str | None = None,
+) -> dict[str, list[dict]]:
+    """Map attempt rows to the ledger run id that reserved their fees."""
+    if run_id:
+        return {run_id: list(rows)}
+    ids = {str(row["experiment_id"]) for row in rows if row.get("experiment_id")}
+    if len(ids) > 1:
+        groups: dict[str, list[dict]] = {}
+        for row in rows:
+            key = str(row.get("experiment_id") or "")
+            groups.setdefault(key, []).append(row)
+        return groups
+    if len(ids) == 1:
+        return {next(iter(ids)): list(rows)}
+    if manifest_id:
+        return {manifest_id: list(rows)}
+    raise ValueError("attempts have no experiment_id; pass --run-id")

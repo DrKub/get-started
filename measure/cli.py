@@ -50,6 +50,17 @@ def build_parser() -> argparse.ArgumentParser:
     ledger = sub.add_parser("ledger", help="show, reconcile, or reset the global fee ledger")
     ledger.add_argument("ledger_action", choices=("show", "reconcile", "reset"))
     ledger.add_argument("--attempts", default=None, help="attempts.jsonl to reconcile against")
+    ledger.add_argument(
+        "--rpc",
+        action="store_true",
+        help="keep only fees whose signatures have landed; requires RPC_URL",
+    )
+    ledger.add_argument("--rpc-url", default=None)
+    ledger.add_argument(
+        "--run-id",
+        default=None,
+        help="ledger run id when attempts.jsonl has no experiment_id",
+    )
     ledger.add_argument("--yes", action="store_true", help="required for reset")
     ledger.add_argument("--data-dir", default=None)
 
@@ -149,9 +160,75 @@ def _ledger(args: argparse.Namespace) -> int:
         raise ConfigError("ledger reconcile requires --attempts")
     from measure.io_util import read_jsonl
 
-    rows = read_jsonl(Path(args.attempts))
+    attempts_path = Path(args.attempts)
+    rows = read_jsonl(attempts_path)
+    if args.rpc:
+        return _reconcile_on_chain(args, ledger, attempts_path, rows)
     total = ledger.reconcile(rows)
-    print(f"reconciled to {total} lamports from submitted rows in {args.attempts}")
+    print(
+        f"reconciled to {total} lamports from submitted rows in {args.attempts}. "
+        "Unlanded submissions stay reserved; pass --rpc to match the chain."
+    )
+    return 0
+
+
+def _reconcile_on_chain(args, ledger, attempts_path: Path, rows: list[dict]) -> int:
+    import json
+    import os
+
+    from measure.errors import RpcError
+    from measure.ledger import group_attempts, landed_fee_lamports
+    from measure.rpc import RpcClient
+
+    manifest_id = None
+    manifest_path = attempts_path.parent / "manifest.json"
+    if manifest_path.is_file():
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if payload.get("experiment_id"):
+            manifest_id = str(payload["experiment_id"])
+    try:
+        groups = group_attempts(rows, run_id=args.run_id, manifest_id=manifest_id)
+    except ValueError as exc:
+        raise ConfigError(str(exc)) from exc
+    if "" in groups:
+        raise ConfigError("attempts have no experiment_id; pass --run-id")
+    url = args.rpc_url or os.environ.get("RPC_URL") or "https://api.mainnet-beta.solana.com"
+    rpc = RpcClient(url, timeout_s=20)
+    prepared = []
+    try:
+        for run_id, group in groups.items():
+            submitted = [row for row in group if row.get("submitted") and row.get("signature")]
+            signatures = [str(row["signature"]) for row in submitted]
+            statuses: list = []
+            try:
+                for start in range(0, len(signatures), 64):
+                    statuses.extend(
+                        rpc.get_signature_statuses(signatures[start : start + 64], search_history=True)
+                    )
+            except RpcError as exc:
+                raise ConfigError(f"not reconciling; status read failed: {exc}") from exc
+            if len(statuses) != len(submitted):
+                raise ConfigError(
+                    f"not reconciling; status count {len(statuses)} != {len(submitted)} signatures"
+                )
+            landed = landed_fee_lamports(submitted, statuses) if submitted else 0
+            landed_n = sum(
+                1
+                for status in statuses
+                if isinstance(status, dict)
+                and not status.get("err")
+                and status.get("confirmationStatus") in {"processed", "confirmed", "finalized"}
+            )
+            prepared.append((run_id, len(submitted), landed_n, landed))
+    finally:
+        rpc.close()
+    for run_id, submitted_n, landed_n, landed in prepared:
+        before = ledger.net_for_run(run_id)
+        ledger.reconcile_run(run_id, landed)
+        print(
+            f"run {run_id}: {landed_n}/{submitted_n} submitted signatures landed; "
+            f"fees {before} -> {landed}; ledger {ledger.spent_lamports}"
+        )
     return 0
 
 

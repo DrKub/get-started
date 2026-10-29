@@ -64,7 +64,9 @@ TRANSACTION_FORMAT = "legacy+compute-budget"
 # Warm the QUIC connection this many slots before the target slot, and
 # submit the burst when the clock reaches target_slot - BURST_OFFSET_SLOTS
 # (the end of the previous leader's last slot).
-QUIC_WARMUP_SLOTS = 2
+# Open the leader QUIC connection this many slots before the burst.
+# A handshake from the last live host took ~1.7s, about 8 slots.
+QUIC_WARMUP_SLOTS = 12
 BURST_OFFSET_SLOTS = 1
 RETRIES_INSIDE_WINDOW = False
 

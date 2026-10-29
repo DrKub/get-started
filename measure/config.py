@@ -61,6 +61,7 @@ class Config:
     collect: bool
     timeout_s: float
     validators_app_token: str | None
+    ws_url: str | None = None
 
     @property
     def spend_cap_sol(self) -> str:
@@ -93,6 +94,7 @@ def config_from_env() -> dict:
         "timeout_s": float(_env("RPC_TIMEOUT_S") or "60"),
         "validators_app_token": _env("VALIDATORS_APP_TOKEN"),
         "mode": (_env("MODE") or "").lower(),
+        "ws_url": _env("WS_URL"),
     }
 
 
@@ -156,6 +158,7 @@ def make_config(
         collect=collect,
         timeout_s=timeout_s if timeout_s is not None else env["timeout_s"],
         validators_app_token=env["validators_app_token"],
+        ws_url=env["ws_url"],
     )
     _validate(config)
     return config
@@ -176,6 +179,8 @@ def _validate(config: Config) -> None:
         raise ConfigError("LEADER_PAGE must be between 1 and 5000")
     if config.spend_cap_lamports > DEFAULT_CAP_LAMPORTS:
         raise ConfigError("spend cap exceeds 0.05 SOL")
+    if config.ws_url is not None and not config.ws_url.startswith(("ws://", "wss://")):
+        raise ConfigError("WS_URL must start with ws:// or wss://")
     if config.experiment_id is not None:
         import re
 

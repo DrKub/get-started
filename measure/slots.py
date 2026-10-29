@@ -47,16 +47,78 @@ def http_to_ws(url: str) -> str:
 
 
 def slot_from_message(message: dict) -> int | None:
-    if message.get("method") == "slotNotification":
-        result = (message.get("params") or {}).get("result") or {}
-        slot = result.get("slot") if isinstance(result, dict) else None
-        return slot if isinstance(slot, int) else None
-    result = message.get("result")
-    if isinstance(result, int):
-        return result
-    if isinstance(result, dict) and isinstance(result.get("slot"), int):
-        return result["slot"]
+    """Read a slot only from ``slotNotification``.
+
+    The subscribe acknowledgement is ``{"result": <subscription id>}``.
+    Treating that integer as a slot asked for the leader of epoch 0.
+    """
+    if message.get("method") != "slotNotification":
+        return None
+    result = (message.get("params") or {}).get("result") or {}
+    if not isinstance(result, dict):
+        return None
+    slot = result.get("slot")
+    if isinstance(slot, int) and slot > 0:
+        return slot
     return None
+
+
+def burst_lead_slots(rtt_s: float, *, slot_s: float = 0.215) -> int:
+    """How many slots before the window to fire so the burst arrives inside it."""
+    if slot_s <= 0:
+        slot_s = 0.215
+    if rtt_s <= 0:
+        return 1
+    return max(1, int((rtt_s / slot_s) + 0.999))
+
+
+def block_fetch_action(message: str) -> str:
+    """How collect should treat a getBlock error: retry, wait, skip, or fail.
+
+    Skipped slots are checked before the digits ``429``, so a slot number
+    cannot be mistaken for HTTP 429.
+    """
+    text = message.lower()
+    if "skipped" in text or "-32007" in text or "-32009" in text:
+        return "skip"
+    if (
+        "http 429" in text
+        or "too many" in text
+        or "rate limit" in text
+        or "-32005" in text
+    ):
+        return "retry"
+    if "not available" in text or "not yet" in text or "-32004" in text:
+        return "wait"
+    return "fail"
+
+
+def is_cluster_slot(slot: int) -> bool:
+    """False for a subscribe ack or any other small integer."""
+    return slot >= 1_000_000
+
+
+def fanout_identities(schedule: list[str], limit: int = 3) -> list[str]:
+    """Distinct leaders after the current one.
+
+    The leader of ``schedule[0]`` is about to rotate out, so funding copies
+    go to the following identities only.
+    """
+    if len(schedule) < 2 or limit < 1:
+        return []
+    current = schedule[0]
+    return unique_leaders([item for item in schedule[1:] if item != current], limit)
+
+
+def unique_leaders(leaders: list[str], limit: int) -> list[str]:
+    chosen: list[str] = []
+    for identity in leaders:
+        if identity in chosen:
+            continue
+        chosen.append(identity)
+        if len(chosen) >= limit:
+            break
+    return chosen
 
 
 class _WsClient:
@@ -148,16 +210,17 @@ class _WsClient:
 class SlotFeed:
     """Prefer ``slotSubscribe``. Fall back to a keep-alive ``getSlot``."""
 
-    def __init__(self, rpc, rpc_url: str) -> None:
+    def __init__(self, rpc, rpc_url: str, ws_url: str | None = None) -> None:
         self.rpc = rpc
         self.rpc_url = rpc_url
+        self._ws_url = ws_url or http_to_ws(rpc_url)
         self.slot = 0
         self._ws: _WsClient | None = None
         self.source = "http"
 
     def start(self) -> None:
         try:
-            ws = _WsClient(http_to_ws(self.rpc_url), timeout=5)
+            ws = _WsClient(self._ws_url, timeout=5)
             ws.send_json({"jsonrpc": "2.0", "id": 1, "method": "slotSubscribe"})
             self._ws = ws
             self.source = "slotSubscribe"
@@ -179,13 +242,45 @@ class SlotFeed:
                     self.source = "http"
                     break
                 slot = slot_from_message(message)
-                if slot is not None and slot >= self.slot:
+                # A subscribe ack is a small integer. Using it as a slot
+                # asks getSlotLeaders for epoch 0.
+                if slot is not None and is_cluster_slot(slot) and slot >= self.slot:
                     self.slot = slot
                     return slot
-        slot = int(self.rpc.get_slot(timeout_s=timeout_s))
-        if slot > self.slot:
-            self.slot = slot
-        return self.slot or slot
+        return self._http_slot(timeout_s)
+
+    def _http_slot(self, timeout_s: float) -> int:
+        from measure.errors import RpcError
+        from measure.rpc import retry_delay
+
+        deadline = time.monotonic() + max(timeout_s, 20.0)
+        attempt = 0
+        last: Exception | None = None
+        while time.monotonic() < deadline:
+            try:
+                slot = int(self.rpc.get_slot(timeout_s=min(5.0, max(timeout_s, 2.0))))
+            except RpcError as exc:
+                last = exc
+                text = str(exc).lower()
+                retryable = "429" in text or "-32005" in text or "too many" in text
+                if not retryable:
+                    if self.slot:
+                        return self.slot
+                    raise
+                time.sleep(retry_delay(attempt))
+                attempt += 1
+                continue
+            if not is_cluster_slot(slot):
+                last = RpcError(f"ignoring non-cluster slot {slot}")
+                time.sleep(retry_delay(attempt))
+                attempt += 1
+                continue
+            if slot > self.slot:
+                self.slot = slot
+            return slot
+        if self.slot:
+            return self.slot
+        raise RpcError(f"getSlot failed: {last}")
 
     def wait_until(self, target: int, *, timeout_s: float) -> int:
         deadline = time.monotonic() + timeout_s

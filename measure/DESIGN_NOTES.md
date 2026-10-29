@@ -85,6 +85,38 @@ Six leaders, both ladders, twelve funding transactions:
 
 Rent used for that figure is the live `getMinimumBalanceForRentExemption(0)` value observed on 2026-10-29: 650,240 lamports. Both numbers are under 0.012 SOL and under the 0.05 SOL cap. If the remaining cap cannot hold the fees, non-conflict rungs are removed from the top before the conflict ladder or the validator set is touched.
 
+## Live send, after the second 2026-10-29 miss (11:17–11:22 Kyiv)
+
+Run `20261029T091750Z` crashed before any send: `slotSubscribe`'s acknowledgement is `{"result": <subscription id>}`, and that integer was used as a slot. `getSlotLeaders` then asked for epoch 0. Run `20261029T091846Z` got a clean QUIC close (`0x0`) and still measured nothing. Funding was handed to the leader of the slot where signing started. The handshake took about 1.7s, the leader rotated, and all 12 funding transactions were dropped. `getSignatureStatuses` and `getBlock` then returned HTTP 429. The 429 was treated as "not landed", the run aborted `funding_unconfirmed`, and `data/spend.json` kept a 60,000 lamport reservation (12 × 5,000) for transactions that are not on chain. `attempts.jsonl` recorded the planned funding `tpu_quic`, not the socket that was written. `collect` raised on the first skipped or not-yet-produced slot and stopped.
+
+Fixes:
+
+- Only `slotNotification` messages advance the clock, and only if the slot is at least 1,000,000. The subscribe ack is ignored.
+- Funding goes out with `sendTransaction` (`skipPreflight`, `maxRetries` 0). The same bytes are also copied to the TPU of the next two or three leaders, not the leader who is about to rotate out. Probe bursts do not use RPC. Each probe connection is opened `QUIC_WARMUP_SLOTS` (12) before the window, the transactions are signed while that connection is open, and the burst is written twice to that leader only when the clock is `ceil(rtt / 0.215s)` slots before the target.
+- Reads (`getSignatureStatuses`, `getBlock`, `getSlot`) retry HTTP 429 and the node-busy codes with exponential backoff and jitter, and reads on one connection are paced. A 429 does not abort the run inside that deadline; signature status stays "unknown" until the slot deadline plus 90 seconds. `RPC_URL` may carry a key in the query string (it is redacted in the manifest). `WS_URL` is optional and separate; otherwise the socket URL is derived from `RPC_URL`.
+- Attempt rows store `destinations` and `send_unix_ms`. `tpu_host` is the first real `host:port` in `destinations`, which is a socket that accepted the bytes.
+- `collect` skips a skipped slot, waits for a block that is not produced yet (up to a few minutes), retries 429, and always continues to the next slot.
+- At the end of a live run the ledger moves that run's net reservation to the fees whose signatures landed. A failed status read does not change the file. `ledger reconcile --attempts <file> --rpc` does the same later. It uses `experiment_id` from the rows or, for this run, from the sibling `manifest.json`. It does not replace other runs' spend.
+
+Clear the 60,000 lamport reservation before the next send. Without `--rpc`, reconcile keeps every `submitted: true` row, which is all 12 funding rows, so the reservation would stay.
+
+```bash
+RPC_URL='https://your-keyed-mainnet-rpc' \
+  python -m measure ledger reconcile \
+  --attempts data/runs/20261029T091846Z/attempts.jsonl \
+  --rpc
+
+RPC_URL='https://your-keyed-mainnet-rpc' \
+WS_URL='wss://your-keyed-mainnet-rpc' \
+KEYPAIR_PATH=/absolute/path/to/id.json \
+SPEND_CAP_SOL=0.05 \
+  python -m measure run --live --collect --min-lead-slots 150
+```
+
+If reconcile prints `not reconciling; status read failed`, the 60,000 lamports are still reserved. Retry with the keyed URL. Do not `ledger reset` unless you intend to drop the reservation without asking the chain.
+
+`WS_URL` may be omitted when it is the `wss://` form of `RPC_URL`. Do not point probes at any leader except the one whose window is being measured.
+
 ## Live send, after the 2026-10-29 miss
 
 The first live run reserved every planned fee, then skipped 12 of 13 groups because each `getSlot` opened a new TLS connection (~0.9s) and slept 0.4s. The one group that was handed to QUIC was a Jito leader, which closed with `0x174 peer sent no certificates`. Those six rows were still marked sent, and `submitted` in `attempts.jsonl` stayed false because the writer hardcoded it.
@@ -96,16 +128,7 @@ Fixes:
 - Funding is submitted first, to the current leader, and probe groups wait until those signatures are at least `processed`. Default `MIN_LEAD_SLOTS` is 150.
 - If TPU fails before transmitting, the same signed bytes go out once via `sendTransaction` (`skipPreflight`, `maxRetries` 0). The row records `tpu` or `rpc-fallback`.
 - `attempts.jsonl` records `submitted`, `submit_path`, and `error`. `collect --from-sent` accepts that file (`target_slot` as well as `planned_slot`). `run --collect` without `--live` reads the newest run.
-- `python -m measure ledger show`, `ledger reconcile --attempts <attempts.jsonl>`, and `ledger reset --yes`. Reconcile keeps only rows with `submitted: true`. The 420,372 lamport reservation from run `20261029T085637Z` should be cleared before the next live run, because none of those rows were actually submitted and none landed.
-
-```bash
-python -m measure ledger reconcile \
-  --attempts data/runs/20261029T085637Z/attempts.jsonl
-KEYPAIR_PATH=/absolute/path/to/id.json \
-RPC_URL=https://your-mainnet-rpc \
-SPEND_CAP_SOL=0.05 \
-  python -m measure run --live --min-lead-slots 150
-```
+- `python -m measure ledger show`, `ledger reconcile --attempts <attempts.jsonl>`, and `ledger reset --yes`. Reconcile without `--rpc` keeps rows with `submitted: true`. The 420,372 lamport reservation from run `20261029T085637Z` was cleared that way before run 2 (those rows were not submitted). The next command is in the section above; run 2's 60,000 lamports need `--rpc` because those funding rows are marked submitted and did not land.
 
 ## Differences the docs should pick up
 
