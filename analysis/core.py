@@ -352,7 +352,12 @@ def position_summary(positions: list[dict]) -> list[dict]:
 def _write_csv(path: Path, rows: list[dict], fields: Iterable[str] | None = None) -> None:
     fieldnames = list(fields or rows[0].keys())
     with path.open("w", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=fieldnames,
+            extrasaction="ignore",
+            lineterminator="\n",
+        )
         writer.writeheader()
         for row in rows:
             writer.writerow(
