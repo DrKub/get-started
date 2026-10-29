@@ -1,83 +1,75 @@
 # Measurement pipeline contract
 
-Python 3.12. This file is the pipeline side of the contract in the docs branch. Where the two disagree, the list at the bottom is what the docs should change. The code is the source of truth for numbers.
+Python 3.12. The README has the operator view and `docs/METHODOLOGY.md` the design. This file records pipeline decisions and the debugging history behind them. The code is the source of truth for numbers.
 
 ## Environment
 
-| Name | Effect |
-| --- | --- |
-| `MODE` | `live` submits. Absent, `dry-run`, or any other value does not. Same switch as `--live`. |
-| `--live` | CLI form of `MODE=live`. Either one is enough. Both together are fine. |
-| `SPEND_CAP_SOL` | Default and hard maximum `0.05`. A larger value is a startup error. |
-| `KEYPAIR_PATH` | Host path. Compose mounts it read-only at `/keys/id.json` and sets the in-container path to that mount. Unset dry-run uses an ephemeral key. |
-| `RPC_URL` | Mainnet RPC. Logged with userinfo and query stripped. |
-| `VALIDATORS_APP_TOKEN` | Optional. Sent only as the `Token` header to validators.app. Never logged. |
-| `DATA_DIR` | Default `data`. Compose sets `/data`. |
+All variables, with defaults, are in the README's environment table; `measure/config.py` reads them. Points that are easy to miss:
 
-`LIVE=1` does nothing. Dry-run signatures are not appended to the ledger.
+- `MODE=live` and `--live` are aliases. Either one sends. Any other `MODE` value, or none, stays on dry-run. `LIVE=1` does nothing.
+- `SPEND_CAP_SOL` above the 0.05 SOL hard cap is a startup error.
+- `KEYPAIR_PATH` is mounted read-only at `/keys/id.json`. An unset dry-run uses an ephemeral key.
+- `RPC_URL` is logged with userinfo and query stripped. `VALIDATORS_APP_TOKEN` is sent only as the `Token` header and never logged.
+- `SEND_ORDER` (`ascending`, `descending`, `shuffled`), `SEND_ORDER_SEED`, `LADDERS` (`both`, `conflict`), `TPU_COPIES` (default 1), and `COLLECT` (`1`/`true`/`yes`) mirror the `run` flags `--send-order`, `--send-order-seed`, `--ladders`, `--tpu-copies`, and `--collect`.
 
 ## Commands
 
 ```bash
-docker compose up --build
-python -m measure run
+docker compose up --build                       # dry-run
+python -m measure run                           # dry-run
+python -m measure run --fixture-dir measure/tests/fixtures/offline --min-lead-slots 16   # offline
+MODE=live KEYPAIR_PATH=/abs/id.json RPC_URL=https://keyed-rpc docker compose up --build
+python -m measure key                           # pubkey and getBalance; does not sign or send
+python -m measure ledger show | reconcile [--attempts f] [--rpc] | reset --yes
+python -m measure collect --from-sent data/runs/<run>/attempts.jsonl
+python -m measure sweep [--keys-dir data/keys/<run>]
+python -m measure parse-block --file block.json --slot N
 ```
 
-```bash
-MODE=live SPEND_CAP_SOL=0.05 KEYPAIR_PATH=/absolute/path/to/id.json \
-  RPC_URL=https://your-mainnet-rpc docker compose up --build
-```
-
-```bash
-python -m measure run --live
-python -m measure key --keypair /absolute/path/to/id.json
-```
-
-`key` prints the public key and `getBalance`. It does not sign or send.
-
-Compose service `measure`, build context `./measure`, host network, volume `./data:/data`.
+The Compose service is `measure`, with build context `./measure`, host network, and volume `./data:/data`. Bridge NAT does not reach leader QUIC reliably. The root `Dockerfile` remains for `docker build -f Dockerfile .`; Compose does not use it. The `report` service (`Dockerfile.report`) runs the offline analysis and figures with no network.
 
 ## Run directory
 
 ```text
-data/runs/<UTC>/
-  manifest.json
-  validators.json
-  spend.json
-  attempts.jsonl
-  blocks/<slot>.json
-  run.log
-data/spend.json          # global fee ledger, not inside the run directory
+data/runs/<UTC>/            live only, committed as evidence
+  manifest.json  validators.json  attempts.jsonl  spend.json
+  block_observations.jsonl  block_observations.csv  block_context.jsonl
+  hypothesis_agreement.json  blocks/<slot>.json[.gz]  run.log  live-stderr.log
+data/dry-runs/<UTC>/        dry-run plans, gitignored
+data/keys/<UTC>/            probe payer keypairs, 0700/0600, gitignored
+data/spend.json             global fee ledger, gitignored
 ```
 
-`data/runs/` and `data/spend.json` are gitignored. A new run directory does not reset the ledger. Only a live signature reserves lamports, and it does that before the bytes are handed to QUIC. There is no retry inside a window.
+A new run directory does not reset the ledger. Only a live signature reserves lamports, and it does that before the bytes are handed to QUIC. There is no retry inside a window. Dry-run signs and does not submit. It does not touch `data/spend.json`, and the signed bytes are discarded.
 
 ## What a run plans
 
-Six identities, at least three `clientId` / `software_client` families, one direct-TPU window each. Frankendancer is recorded if it is scheduled and is not preferred. When `VALIDATORS_APP_TOKEN` is set, `software_client` and `software_version` replace the RPC version fields. Without it, `getClusterNodes` `clientId` plus `getVoteAccounts` stake is the classification, and the manifest says `rpc`.
+Six identities, at least three `clientId` families, one direct-TPU window each. The selector goes round-robin across labels and adds one identity outside the ten largest by stake when one is scheduled; otherwise `notes` says so. Frankendancer is its own family at the back of the round-robin. With `VALIDATORS_APP_TOKEN`, `software_client` and `software_version` replace the RPC fields, and validators.app `active_stake` values of at least 1e12 are read as lamports, smaller values as SOL. Without the token, `getClusterNodes` `clientId` plus `getVoteAccounts` stake is the classification, and the manifest says `rpc`.
 
-Two ladders, fees `0, 1, 2, 4, 8, 16` lamports, low fee first, same 1,000 CU limit, one-lamport system transfer, no memo:
+Two ladders, fees `0, 1, 2, 4, 8, 16` lamports, same 1,000 CU limit, one-lamport system transfer, no memo:
 
-- **conflict** at slot offset 0: one payer, one recipient
-- **nonconflict** at slot offset 2: distinct payer and recipient per rung
+- **conflict** at slot offset 0: a self-transfer from the funder on every rung, so the funder is the one shared write lock
+- **nonconflict** at slot offset 2: a fresh payer per rung, each self-transferring, bound to its rung's fee
 
-Twelve probe accounts are funded once (rent plus the fees those accounts will pay). The conflict ladder reuses the first recipient. Funding is its own slot, before the measured slots, and is not part of either tau.
+The send order within a burst is `--send-order`. The default `ascending` sends the low fee first, and both live runs used it. `shuffled` draws a seeded permutation with |tau-b(fee, send)| ≤ 1/3 per ladder (`plan.send_permutation`). `descending` sends the high fee first. `--ladders conflict` drops the non-conflict ladder, and with it the funding, the rent, and the sweep.
 
-QUIC warmup is 2 slots before the target. The burst offset is 1 slot before the target. Both numbers are in `manifest.json` and are the same for every leader.
+Run 3 (`9d482c8`) predates the self-transfer form. Its 12 probe accounts were funded once as a shared pool (six payers and six recipients), the conflict ladder reused the first recipient, and the keys were held only in memory, so the rent could not be swept. Run 4 (`164768b`) and later use the form above.
+
+QUIC connections open `QUIC_WARMUP_SLOTS` (12) before the target. The burst fires at `target_slot − max(BURST_OFFSET_SLOTS, ceil(rtt / 0.215 s))`, which was one slot for every burst in runs 3 and 4. Both constants are in `manifest.json` and are the same for every leader.
 
 `getAgGenesisCert` is called on live RPC. The stored certificate slot is checked against 459,652,999. The measurement cutoff remains slot `459653000` even when the method is missing.
 
-`getBlock` uses `maxSupportedTransactionVersion: 1`. Probes themselves are legacy transactions with `SetComputeUnitLimit` and `SetComputeUnitPrice`, not SIMD-0385 v1 messages. The controlled variable is the priority fee in lamports. Version 0 `getBlock` requests fail on current mainnet because blocks contain v1 transactions.
+`getBlock` uses `maxSupportedTransactionVersion: 1`. Probes themselves are legacy transactions with `SetComputeUnitLimit` and `SetComputeUnitPrice`, not SIMD-0385 v1 messages. The controlled variable is the priority fee in lamports. Version 0 `getBlock` requests fail on current mainnet because blocks contain v1 transactions. Entry index is absent from `getBlock`, so tau uses the block index.
 
-CU limit 1,000 was frozen from a devnet `simulateTransaction` on 2026-10-29 (slot 516359079, 450 CU consumed). That probe is not a measurement.
+The 1,000 CU limit was frozen from a devnet `simulateTransaction` on 2026-10-29 (slot 516359079, 450 CU consumed). That probe is a manifest constant, not a call on every run, and it is not a measurement.
 
 Priority score `P = (reward * 1_000_000) / (cost + 1)` is checked unique before a ladder is kept. Reward is half the base fee plus the whole priority fee. Cost is the fixed shape: 720 per signature, 300 per writable account, plus the CU limit.
 
-Slot calls live in `measure/stats.py`: `strict_priority` at tau-b = −1, otherwise the thresholds in the methodology.
+Slot calls live in `measure/stats.py` and `analysis/core.py`: `strict_priority` at tau-b = −1, otherwise the thresholds in the methodology. The arrival test uses tau-b against send order, so it stays correct for shuffled ladders.
 
 ## Default cost
 
-Conflict probes are one-lamport self-transfers from the funder, so they do not create an account. Each non-conflict rung is its own fee payer, also a self-transfer. Those keypairs are written to `DATA_DIR/keys/<experiment_id>/` mode 0600 (gitignored). A live run sweeps them back to the funder after the probes land; `python -m measure sweep` retries any that remain.
+Non-conflict payer keypairs are written to `DATA_DIR/keys/<experiment_id>/` with mode 0600 (gitignored). A live run sweeps them back to the funder after the probes land; `python -m measure sweep` retries any that remain.
 
 Rent used for the peak figure is the 2026-10-29 `getMinimumBalanceForRentExemption(0)` value, 650,240 lamports. The non-conflict ladder is shortened until:
 
@@ -90,9 +82,15 @@ A fixture dry-run at rent 650,240 lamports keeps non-conflict fees `(0, 1, 2, 4)
 
 - net after sweep: **340,228 lamports (0.000340228 SOL)**
 - peak, including temporary rent: **2,941,212 lamports (0.002941212 SOL)**
-- temporary rent sweep returns: **2,600,984 lamports**
+- temporary rent returned by the sweep: **2,600,984 lamports**
 
-`run --live --collect` fetches blocks after the send, including slots reported by `getSignatureStatuses` so funding is not left on a planned slot it missed. `hypothesis_agreement.json` includes `ladders`: Kendall tau-b of priority fee against block index for each validator's conflict and non-conflict group. The ledger's end-of-run reconcile, and `ledger reconcile --rpc`, sum `getTransaction` `meta.fee`. Probe bursts are written once unless `--tpu-copies` is set; each copy's timestamp is `copy_send_unix_ms`.
+Run 4 matched this exactly. With `--ladders conflict` the plan is 36 probes and 180,186 lamports of fees, with no rent.
+
+`run --live --collect` (or `COLLECT=1`) fetches blocks after the send, including slots reported by `getSignatureStatuses`, so funding is not left on a planned slot it missed. The end-of-run ledger reconcile, and `ledger reconcile --rpc`, sum `getTransaction` `meta.fee`. Probe bursts are written once unless `--tpu-copies` is set, and each copy's timestamp is `copy_send_unix_ms`.
+
+# History
+
+The sections below describe failures in the first two live attempts and the fixes that followed. They are kept as the record behind "what went wrong" in the report. Some details here, such as writing every burst twice, were later changed.
 
 ## Live send, after the second 2026-10-29 miss (11:17–11:22 Kyiv)
 
@@ -101,7 +99,7 @@ Run `20261029T091750Z` crashed before any send: `slotSubscribe`'s acknowledgemen
 Fixes:
 
 - Only `slotNotification` messages advance the clock, and only if the slot is at least 1,000,000. The subscribe ack is ignored.
-- Funding goes out with `sendTransaction` (`skipPreflight`, `maxRetries` 0). The same bytes are also copied to the TPU of the next two or three leaders, not the leader who is about to rotate out. Probe bursts do not use RPC. Each probe connection is opened `QUIC_WARMUP_SLOTS` (12) before the window, the transactions are signed while that connection is open, and the burst is written twice to that leader only when the clock is `ceil(rtt / 0.215s)` slots before the target.
+- Funding goes out with `sendTransaction` (`skipPreflight`, `maxRetries` 0). The same bytes are also copied to the TPU of the next two or three leaders, not the leader who is about to rotate out. Probe bursts do not use RPC. Each probe connection is opened `QUIC_WARMUP_SLOTS` (12) before the window, the transactions are signed while that connection is open, and the burst is written twice (run 3; later code writes it once unless `--tpu-copies` is set) to that leader only when the clock is `ceil(rtt / 0.215s)` slots before the target.
 - Reads (`getSignatureStatuses`, `getBlock`, `getSlot`) retry HTTP 429 and the node-busy codes with exponential backoff and jitter, and reads on one connection are paced. A 429 does not abort the run inside that deadline; signature status stays "unknown" until the slot deadline plus 90 seconds. `RPC_URL` may carry a key in the query string (it is redacted in the manifest). `WS_URL` is optional and separate; otherwise the socket URL is derived from `RPC_URL`.
 - Attempt rows store `destinations` and `send_unix_ms`. `tpu_host` is the first real `host:port` in `destinations`, which is a socket that accepted the bytes.
 - `collect` skips a skipped slot, waits for a block that is not produced yet (up to a few minutes), retries 429, and always continues to the next slot.
@@ -138,20 +136,3 @@ Fixes:
 - If TPU fails before transmitting, the same signed bytes go out once via `sendTransaction` (`skipPreflight`, `maxRetries` 0). The row records `tpu` or `rpc-fallback`.
 - `attempts.jsonl` records `submitted`, `submit_path`, and `error`. `collect --from-sent` accepts that file (`target_slot` as well as `planned_slot`). `run --collect` without `--live` reads the newest run.
 - `python -m measure ledger show`, `ledger reconcile --attempts <attempts.jsonl>`, and `ledger reset --yes`. Reconcile without `--rpc` keeps rows with `submitted: true`. The 420,372 lamport reservation from run `20261029T085637Z` was cleared that way before run 2 (those rows were not submitted). The next command is in the section above; run 2's 60,000 lamports need `--rpc` because those funding rows are marked submitted and did not land.
-
-## Differences the docs should pick up
-
-1. **`MODE=live` and `--live` are aliases.** The process does not require both. `MODE` other than `live` stays on dry-run even if someone expected a typo to fail closed. `--live` still sends if `MODE` is unrecognised.
-2. **Build context is `./measure`.** The root `Dockerfile` remains so `docker build -f Dockerfile .` from the repo root still works. Compose does not use it.
-3. **Host network.** Bridge NAT cannot reach leader QUIC reliably. The docs do not mention this.
-4. **No RPC submit path.** The methodology says one path. An earlier pipeline draft had an RPC comparison arm. It is gone.
-5. **Upcoming leaders come from `getSlotLeaders`**, not a full-epoch `getLeaderSchedule`. The four-slot grouping is checked on that lookahead (default 16,000 slots).
-6. **Probe accounts are a shared pool of 12**, funded once, not six new payers per leader. Per-leader funding would push rent principal over the 0.012 SOL design budget. The cap still counts only fees.
-7. **Non-conflict payers are ephemeral keypairs** generated for the process. Their secrets are not written to disk. A later live run creates its own. Dry-run signatures are of those keys (and of `KEYPAIR_PATH` when it is mounted) and the raw signed bytes are discarded.
-8. **Dry-run does sign, and does not submit, and does not touch `data/spend.json`.** The docs' "not counted" sentence matches this.
-9. **`key` subcommand** is extra. It is not in the docs.
-10. **Frankendancer is not sought.** If `clientId` is Frankendancer and the identity is scheduled, it is its own family at the back of the round-robin.
-11. **Stake outside the top ten** is attempted. If the lookahead has no such identity, the run still proceeds and `notes` says so. The docs ask for that sentence under what went wrong.
-12. **validators.app `active_stake` unit** is inferred: values ≥ 1e12 are lamports, smaller values are SOL. `getVoteAccounts.activatedStake` is always lamports.
-13. **Entry index** is still absent from `getBlock`. Tau uses block index.
-14. **Devnet CU probe is a constant in the manifest**, not a call on every run, so a mainnet dry-run does not touch devnet.

@@ -72,7 +72,7 @@ A live run:
 
 1. funds one fresh payer per non-conflict rung (6 by default);
 2. waits for the funding to land;
-3. sends each ladder as one QUIC burst to the target leader's TPU one slot before its planned slot;
+3. sends each ladder as one QUIC burst to the target leader's TPU, at least one slot before its planned slot (more if the handshake RTT exceeds a slot);
 4. collects `getBlock` for the landed slots (`COLLECT=1` is the Compose default; `--collect` on the CLI);
 5. reconciles the ledger to on-chain `meta.fee`;
 6. sweeps the payer accounts back to the funder.
