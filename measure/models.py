@@ -100,6 +100,8 @@ class PlannedTx:
     signed: bool = False
     sent: bool = False
     submitted: bool = False
+    submit_path: str = ""
+    error: str | None = None
 
 
 @dataclass

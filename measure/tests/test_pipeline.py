@@ -28,6 +28,7 @@ def _config(tmp_path: Path, **kwargs):
         data_dir=str(tmp_path / "data"),
         experiment_id="e1071-test",
         rpc_url="http://127.0.0.1:9",
+        min_lead_slots=16,
         **kwargs,
     )
 
@@ -123,6 +124,8 @@ def test_cli_fixture_ignores_dead_rpc(tmp_path, monkeypatch):
             "http://127.0.0.1:9",
             "--experiment-id",
             "e1071-test",
+            "--min-lead-slots",
+            "16",
         ]
     )
     assert code == 0

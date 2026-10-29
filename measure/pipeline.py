@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from dataclasses import asdict, fields
 from datetime import datetime, timezone
+from pathlib import Path
 
 from measure.analyze import summarize_hypotheses
 from measure.collector import (
@@ -172,11 +173,13 @@ def _attempt_row(tx: PlannedTx) -> dict:
         "priority_score": tx.priority_score,
         "role": tx.role,
         "send_index": tx.send_index,
+        "error": tx.error,
         "send_unix_ms": None,
         "seq": tx.seq,
         "signature": tx.signature,
         "signed": tx.signed,
-        "submitted": False,
+        "submit_path": tx.submit_path,
+        "submitted": tx.submitted,
         "target_slot": tx.planned_slot,
         "tpu_host": host or None,
         "tpu_port": int(port) if port.isdigit() else None,
@@ -530,103 +533,229 @@ def _rent_lamports(config: Config) -> int:
     return DEFAULT_RENT_LAMPORTS
 
 
+def _tpu_for(plan: ExperimentPlan, identity: str) -> str:
+    for node in plan.snapshot.nodes:
+        if node.get("pubkey") == identity and isinstance(node.get("tpuQuic"), str):
+            return node["tpuQuic"]
+    for target in plan.targets:
+        if target.identity == identity:
+            return target.tpu_quic
+    return ""
+
+
+def _reserve_batch(ledger: SpendLedger, batch: list[PlannedTx], run_id: str) -> None:
+    ledger.ensure_fits(sum(tx.fee_lamports for tx in batch))
+    for tx in batch:
+        ledger.reserve(tx.fee_lamports, run_id=run_id, seq=tx.seq, reason="signed")
+
+
+def _release_batch(ledger: SpendLedger, batch: list[PlannedTx], run_id: str, reason: str) -> None:
+    for tx in batch:
+        ledger.release(tx.fee_lamports, run_id=run_id, seq=tx.seq, reason=reason)
+
+
+def _submit_batch(batch: list[PlannedTx], payloads: list[bytes], tpu: str, rpc: RpcClient) -> str:
+    """Return the path that accepted the batch. Raise when neither path did."""
+    from measure.tpu import TpuSendError, TpuSender
+
+    tpu_error = ""
+    if tpu:
+        try:
+            TpuSender().send_payloads(payloads, destination=tpu)
+            return "tpu"
+        except TpuSendError as exc:
+            tpu_error = str(exc)
+            logger.error("TPU send failed: %s", exc)
+            if exc.transmitted:
+                # The leader may have the bytes. Do not also send them via RPC.
+                raise
+        except Exception as exc:
+            tpu_error = str(exc)
+            logger.error("TPU send failed: %s", exc)
+    try:
+        for raw in payloads:
+            rpc.send_transaction(raw)
+        return "rpc-fallback"
+    except Exception as exc:
+        detail = f"tpu: {tpu_error}; rpc: {exc}" if tpu_error else str(exc)
+        raise RpcError(detail) from exc
+
+
+def _signatures_landed(rpc: RpcClient, signatures: list[str]) -> bool:
+    if not signatures:
+        return True
+    try:
+        statuses = rpc.get_signature_statuses(signatures)
+    except RpcError as exc:
+        logger.warning("signature status failed: %s", exc)
+        return False
+    for status in statuses:
+        if not status or status.get("err"):
+            return False
+        if status.get("confirmationStatus") not in {"processed", "confirmed", "finalized"}:
+            return False
+    return True
+
+
 def _run_live(plan: ExperimentPlan, config: Config, run_dir: Path, ledger: SpendLedger, genesis) -> int:
-    """Reserve the global cap, sign, and submit each slot group once.
+    """Fund first, wait until those signatures land, then send each probe window.
 
-    A failed send is not retried. The reserved fee stays on the ledger
-    because the bytes may already have left the process.
+    The cap is reserved only for a batch that is about to be signed. A send
+    that fails before the leader accepts it is released. There is no retry
+    of the same group; RPC is a different path, recorded on the row.
     """
-    from measure.tpu import TpuSender
-
-    from measure.live import wait_for_slot
+    from measure.slots import SlotFeed, send_decision
 
     keypair = load_keypair(config.keypair_path)
     signers = {str(keypair.pubkey()): keypair, **getattr(plan, "ephemeral_signers", {})}
     rpc = RpcClient(config.rpc_url, timeout_s=config.timeout_s)
-    sender = TpuSender()
+    feed = SlotFeed(rpc, config.rpc_url)
+    feed.start()
+    logger.info("slot clock: %s", feed.source)
     aborted = None
-    sent = 0
-    groups: dict[int, list] = {}
-    for tx in plan.txs:
-        groups.setdefault(tx.planned_slot, []).append(tx)
-    for slot in sorted(groups):
-        batch = groups[slot]
-        try:
-            for tx in batch:
-                ledger.reserve(tx.fee_lamports, run_id=plan.experiment_id, seq=tx.seq, reason="signed")
-        except SpendCapExceeded:
-            aborted = "spend_cap"
-            break
-        if not batch[0].tpu_quic:
-            for tx in batch:
-                tx.signed = False
-            continue
-        try:
-            slot_now = wait_for_slot(rpc, max(slot - BURST_OFFSET_SLOTS, 0))
-        except TimeoutError:
-            aborted = "timeout"
-            break
-        if slot_now > slot + 1:
-            continue
-        payloads = []
-        for tx in batch:
-            signer = signers[tx.payer]
-            raw, signature = sign_transaction(tx, signer, rpc.get_latest_blockhash())
-            tx.signature = signature
-            tx.signed = True
-            payloads.append(raw)
-        try:
-            sender.send_payloads(payloads, destination=batch[0].tpu_quic)
-            for tx in batch:
-                tx.submitted = True
-                tx.sent = True
-            sent += len(batch)
-        except Exception as exc:
-            logger.error("TPU send failed, not retrying: %s", exc)
-            for tx in batch:
-                tx.sent = False
-        del payloads
-    if hasattr(plan, "ephemeral_signers"):
-        del plan.ephemeral_signers
-    del signers, keypair
-    exit_code = 0 if aborted is None and sent else (3 if aborted == "spend_cap" else 1)
+    try:
+        funding = [tx for tx in plan.txs if tx.role == "funding"]
+        probes = [tx for tx in plan.txs if tx.role != "funding"]
+        if funding:
+            slot_now = feed.current()
+            leader = rpc.get_slot_leader(slot_now)
+            tpu = _tpu_for(plan, leader)
+            if not _send_group(funding, plan, ledger, signers, rpc, tpu, slot_now):
+                aborted = "funding_failed"
+            else:
+                deadline_slot = min(tx.planned_slot for tx in probes) - BURST_OFFSET_SLOTS if probes else slot_now + 40
+                if not _wait_landed(rpc, feed, [tx.signature for tx in funding if tx.signature], deadline_slot):
+                    aborted = "funding_unconfirmed"
+                    for tx in probes:
+                        tx.error = "funding_unconfirmed"
+        if aborted is None:
+            groups: dict[tuple, list[PlannedTx]] = {}
+            for tx in probes:
+                groups.setdefault((tx.planned_slot, tx.identity), []).append(tx)
+            for key in sorted(groups):
+                batch = groups[key]
+                target = batch[0].planned_slot
+                try:
+                    slot_now = feed.wait_until(
+                        max(target - BURST_OFFSET_SLOTS, 0),
+                        timeout_s=max(30.0, (target - feed.slot) * 0.3 + 20),
+                    )
+                except TimeoutError:
+                    aborted = "timeout"
+                    for tx in batch:
+                        tx.error = "timeout"
+                    break
+                decision = send_decision(
+                    slot_now,
+                    target_slot=target,
+                    window_start=batch[0].window_start_slot,
+                    window_length=batch[0].window_length,
+                    burst_offset=BURST_OFFSET_SLOTS,
+                )
+                if decision == "skip":
+                    for tx in batch:
+                        tx.error = "missed_window"
+                    logger.error("skipped slot %s at current slot %s", target, slot_now)
+                    continue
+                if not _send_group(batch, plan, ledger, signers, rpc, batch[0].tpu_quic, slot_now):
+                    aborted = aborted or "send_failed"
+    finally:
+        feed.close()
+        rpc.close()
+        if hasattr(plan, "ephemeral_signers"):
+            del plan.ephemeral_signers
+        del signers, keypair
+    submitted = sum(1 for tx in plan.txs if tx.submitted)
+    exit_code = 3 if aborted == "spend_cap" else (0 if submitted and aborted is None else 1)
     summary = _summary(
         plan,
         config,
         aborted=aborted,
         exit_code=exit_code,
         signed_count=sum(1 for tx in plan.txs if tx.signed),
-        sent_count=sent,
+        sent_count=submitted,
         spent_lamports=ledger.spent_lamports,
     )
     write_plan_files(plan, config, summary, run_dir, ledger=ledger, genesis=genesis)
     return exit_code
 
 
+def _send_group(batch, plan, ledger, signers, rpc, tpu: str, slot_now: int) -> bool:
+    try:
+        _reserve_batch(ledger, batch, plan.experiment_id)
+    except SpendCapExceeded:
+        for tx in batch:
+            tx.error = "spend_cap"
+        return False
+    blockhash = rpc.get_latest_blockhash()
+    payloads = []
+    try:
+        for tx in batch:
+            raw, signature = sign_transaction(tx, signers[tx.payer], blockhash)
+            tx.signature = signature
+            tx.signed = True
+            payloads.append(raw)
+        path = _submit_batch(batch, payloads, tpu, rpc)
+    except Exception as exc:
+        logger.error("batch seq %s not submitted: %s", batch[0].seq, exc)
+        for tx in batch:
+            tx.error = str(exc)
+            tx.submitted = False
+            tx.sent = False
+        if not getattr(exc, "transmitted", False):
+            _release_batch(ledger, batch, plan.experiment_id, "send_failed")
+        return False
+    finally:
+        del payloads
+    for tx in batch:
+        tx.submit_path = path
+        tx.path = path
+        tx.submitted = True
+        tx.sent = True
+        tx.error = None
+    logger.info("submitted %s txs via %s at slot %s", len(batch), path, slot_now)
+    return True
+
+
+def _wait_landed(rpc, feed, signatures: list[str | None], deadline_slot: int) -> bool:
+    pending = [sig for sig in signatures if sig]
+    if not pending:
+        return False
+    while True:
+        if _signatures_landed(rpc, pending):
+            return True
+        if feed.slot >= deadline_slot:
+            return False
+        try:
+            feed.wait_until(feed.slot + 1, timeout_s=5)
+        except TimeoutError:
+            return _signatures_landed(rpc, pending)
+
+
 def _collect_live(rpc: RpcClient, plan: ExperimentPlan, sent_rows: list[dict], config: Config) -> None:
     plans = [asdict(tx) for tx in plan.txs]
-    slots = slots_to_fetch(plans)
+    slots = slots_to_fetch(plans or sent_rows)
     if not slots:
         return
-    from measure.live import wait_for_slot
-
-    wait_for_slot(rpc, max(slots))
-    _write_collection(rpc, slots, plans, sent_rows, config)
+    out = config.output_dir or config.data_dir
+    _write_collection(rpc, slots, plans, sent_rows, out)
 
 
 def collect_from_sent(config: Config, sent_path, plans_path) -> int:
+    sent_path = Path(sent_path)
     sent_rows = read_jsonl(sent_path)
-    plans = read_jsonl(plans_path) if plans_path else []
-    slots = slots_to_fetch(plans or sent_rows)
+    plans = read_jsonl(plans_path) if plans_path else sent_rows
+    slots = slots_to_fetch(sent_rows)
     if len(slots) > 500:
         raise ConfigError(f"refusing to fetch {len(slots)} blocks")
+    out = config.output_dir or sent_path.parent
     rpc = RpcClient(config.rpc_url, timeout_s=config.timeout_s)
-    _write_collection(rpc, slots, plans, sent_rows, config)
-    print(f"collected {len(slots)} slots into {config.output_dir}")
+    _write_collection(rpc, slots, plans, sent_rows, out)
+    print(f"collected {len(slots)} slots into {out}")
     return 0
 
 
-def _write_collection(rpc, slots, plans, sent_rows, config: Config) -> None:
+def _write_collection(rpc, slots, plans, sent_rows, out: Path) -> None:
     from measure.constants import MAX_BLOCKS_TO_FETCH
 
     if len(slots) > MAX_BLOCKS_TO_FETCH:
@@ -634,9 +763,12 @@ def _write_collection(rpc, slots, plans, sent_rows, config: Config) -> None:
     import time
 
     blocks = []
+    block_dir = out / "blocks"
+    block_dir.mkdir(parents=True, exist_ok=True)
     for index, slot in enumerate(slots):
         result = rpc.get_block(slot)
         if result is not None:
+            dump_json(block_dir / f"{slot}.json", result)
             blocks.append(parse_block(result, slot))
         if index + 1 < len(slots):
             time.sleep(0.25)
@@ -649,7 +781,6 @@ def _write_collection(rpc, slots, plans, sent_rows, config: Config) -> None:
     our_signatures = {sig for sig in signatures.values()}
     contexts = [block_context(block, our_signatures) for block in blocks]
     analysis = summarize_hypotheses(observations)
-    out = config.output_dir
     write_jsonl(out / "block_observations.jsonl", observations)
     write_csv(out / "block_observations.csv", observations, OBSERVATION_FIELDS)
     write_jsonl(out / "block_context.jsonl", contexts)

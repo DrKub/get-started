@@ -30,7 +30,9 @@ ROTATION_SLOTS = 4
 
 DEFAULT_RPC_URL = "https://api.mainnet-beta.solana.com"
 DEFAULT_LOOKAHEAD_SLOTS = 16_000
-DEFAULT_MIN_LEAD_SLOTS = 16
+# Planning the live run takes around 15s. At ~215 ms/slot that is ~70 slots,
+# so 16 slots of lead expired before the first send. 150 slots is ~30s.
+DEFAULT_MIN_LEAD_SLOTS = 150
 DEFAULT_TARGET_VALIDATORS = 6
 DEFAULT_MIN_CLIENT_FAMILIES = 3
 DEFAULT_LEADER_PAGE = 4_000

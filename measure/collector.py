@@ -352,14 +352,17 @@ def build_observations(
 
 
 def slots_to_fetch(plans: list[dict]) -> list[int]:
+    """Slots to read back. Attempts use ``target_slot``; plans use ``planned_slot``."""
     slots: set[int] = set()
     for plan in plans:
         start = plan.get("window_start_slot")
         length = plan.get("window_length") or 4
         if isinstance(start, int) and isinstance(length, int) and length > 0:
-            for slot in range(start, start + length + 2):
+            for slot in range(start, start + int(length) + 2):
                 slots.add(slot)
-        planned = plan.get("planned_slot")
-        if isinstance(planned, int):
-            slots.add(planned)
+        for key in ("planned_slot", "target_slot", "landed_slot"):
+            value = plan.get(key)
+            if isinstance(value, int):
+                for slot in range(value, value + 4):
+                    slots.add(slot)
     return sorted(slots)

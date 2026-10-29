@@ -43,13 +43,53 @@ class SpendLedger:
             raise SpendCapExceeded(self.spent_lamports, fee_lamports, self.cap_lamports)
 
     def reserve(self, fee_lamports: int, *, run_id: str, seq: int, reason: str) -> None:
-        """Count a signature that is about to be produced. Persists before return."""
+        """Count a signature that is about to be submitted. Persists before return."""
         self.ensure_fits(fee_lamports)
         self.spent_lamports += fee_lamports
+        self._append(fee_lamports, run_id=run_id, seq=seq, reason=reason)
+
+    def release(self, fee_lamports: int, *, run_id: str, seq: int, reason: str) -> None:
+        """Give back a reservation when the bytes never left the process."""
+        self.spent_lamports = max(0, self.spent_lamports - fee_lamports)
+        self._append(-fee_lamports, run_id=run_id, seq=seq, reason=reason)
+
+    def reset(self, *, reason: str = "reset") -> None:
+        """Clear a phantom reservation. Requires an explicit operator call."""
+        delta = -self.spent_lamports
+        self.spent_lamports = 0
+        self._append(delta, run_id="", seq=-1, reason=reason)
+
+    def reconcile(self, attempts: list[dict], *, landed_signatures: set[str] | None = None) -> int:
+        """Replace the running total with fees that were submitted, or that landed.
+
+        ``landed_signatures`` is the chain's answer. Without it, only rows
+        with ``submitted`` true count. A run that reserved every plan row
+        and submitted none reconciles to zero.
+        """
+        if landed_signatures is None:
+            total = sum(
+                int(row.get("fee_lamports") or 0)
+                for row in attempts
+                if row.get("submitted") is True
+            )
+            basis = "submitted"
+        else:
+            total = sum(
+                int(row.get("fee_lamports") or 0)
+                for row in attempts
+                if row.get("signature") in landed_signatures
+            )
+            basis = "landed"
+        delta = total - self.spent_lamports
+        self.spent_lamports = total
+        self._append(delta, run_id="", seq=-1, reason=f"reconcile:{basis}")
+        return total
+
+    def _append(self, lamports: int, *, run_id: str, seq: int, reason: str) -> None:
         self.entries.append(
             {
                 "at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "lamports": fee_lamports,
+                "lamports": lamports,
                 "reason": reason,
                 "run_id": run_id,
                 "seq": seq,

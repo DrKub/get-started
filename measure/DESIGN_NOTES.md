@@ -85,6 +85,28 @@ Six leaders, both ladders, twelve funding transactions:
 
 Rent used for that figure is the live `getMinimumBalanceForRentExemption(0)` value observed on 2026-10-29: 650,240 lamports. Both numbers are under 0.012 SOL and under the 0.05 SOL cap. If the remaining cap cannot hold the fees, non-conflict rungs are removed from the top before the conflict ladder or the validator set is touched.
 
+## Live send, after the 2026-10-29 miss
+
+The first live run reserved every planned fee, then skipped 12 of 13 groups because each `getSlot` opened a new TLS connection (~0.9s) and slept 0.4s. The one group that was handed to QUIC was a Jito leader, which closed with `0x174 peer sent no certificates`. Those six rows were still marked sent, and `submitted` in `attempts.jsonl` stayed false because the writer hardcoded it.
+
+Fixes:
+
+- The QUIC client presents an ephemeral Ed25519 certificate. A peer error close is a failed send. If nothing was written, the reservation is released.
+- Slot updates come from `slotSubscribe` when the RPC allows it, otherwise from a keep-alive `getSlot` with a 2s socket timeout. A group is sendable until the leader window ends, not only for one slot after the target.
+- Funding is submitted first, to the current leader, and probe groups wait until those signatures are at least `processed`. Default `MIN_LEAD_SLOTS` is 150.
+- If TPU fails before transmitting, the same signed bytes go out once via `sendTransaction` (`skipPreflight`, `maxRetries` 0). The row records `tpu` or `rpc-fallback`.
+- `attempts.jsonl` records `submitted`, `submit_path`, and `error`. `collect --from-sent` accepts that file (`target_slot` as well as `planned_slot`). `run --collect` without `--live` reads the newest run.
+- `python -m measure ledger show`, `ledger reconcile --attempts <attempts.jsonl>`, and `ledger reset --yes`. Reconcile keeps only rows with `submitted: true`. The 420,372 lamport reservation from run `20261029T085637Z` should be cleared before the next live run, because none of those rows were actually submitted and none landed.
+
+```bash
+python -m measure ledger reconcile \
+  --attempts data/runs/20261029T085637Z/attempts.jsonl
+KEYPAIR_PATH=/absolute/path/to/id.json \
+RPC_URL=https://your-mainnet-rpc \
+SPEND_CAP_SOL=0.05 \
+  python -m measure run --live --min-lead-slots 150
+```
+
 ## Differences the docs should pick up
 
 1. **`MODE=live` and `--live` are aliases.** The process does not require both. `MODE` other than `live` stays on dry-run even if someone expected a typo to fail closed. `--live` still sends if `MODE` is unrecognised.
